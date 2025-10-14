@@ -9,9 +9,11 @@ namespace todo {
 
 class ToDoItem {
 public:
-ToDoItem(std::string name,
-         std::string description,
-         boost::posix_time::ptime term);
+    ToDoItem(std::string name,
+            std::string description,
+            boost::posix_time::ptime term);
+
+    ToDoItem() = default;
 
 public:
     std::string toString() const;

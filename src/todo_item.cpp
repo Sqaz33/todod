@@ -14,8 +14,8 @@ ToDoItem::ToDoItem(std::string name,
 
 std::string ToDoItem::toString() const {
     std::stringstream ss;
-    ss << "Name: "        << name_
-       << "Description: " << description_ 
+    ss << "Name: "        << name_ << ' '
+       << "Description: " << description_ << ' ' 
        << "Term: "        << term_; 
     return ss.str();
 }

@@ -2,6 +2,7 @@
 
 #include "icontroller.hpp"
 #include "isubject.hpp"
+#include "event.hpp"
 
 namespace controller {
 
@@ -13,8 +14,11 @@ public:
     void run();
 
 public: // IController interface
-const todo::ToDoItem& receiveItem() const override;
-void sendItem(const todo::ToDoItem& item) override;
+    const todo::ToDoItem& receiveItem() const override;
+    void sendItem(const todo::ToDoItem& item) override;
+
+private:
+    void notifyObservers_(event::event_t ev);
 
 public: // ISubject interface
     void attach(
