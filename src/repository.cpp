@@ -11,9 +11,9 @@ Repository::Repository(
 
 void Repository::update(int newState) {
     using namespace event;
-    auto ev = static_cast<event_t>(newState);
+    auto evt = static_cast<event_t>(newState);
 
-    switch (ev) {
+    switch (evt) {
         case event_t::USER_ASK_ADD_TODO: 
             addItemFromController_();
             break;
@@ -33,6 +33,5 @@ void Repository::addItemFromController_() {
     auto&& item = contr_->receiveItem();
     items_.insert(item);
 }
-
 
 } // namespace repository

@@ -51,13 +51,13 @@ public:
         for (auto&& row : res) {
             res.push_back(rows_<T...>(row, 0));
         }
+        return res;
     }
 
-    // void addRow(
-    //     const std::string& tableName, 
-        
-    // );
-
+    void addRow(
+        const std::string& tableName,
+        const std::vector<std::pair<std::string, std::string>>& entries);
+    
 private:    
     template <class T>
     std::tuple<T> rows_(

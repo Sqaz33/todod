@@ -73,7 +73,7 @@ void DB::createTable(
     stm << " (";
     stm << primaryKey.first 
         << primaryKey.second
-        << "PRIMARY KEY AUTOINCREMENT"
+        << "PRIMARY KEY"
         << ',';
     int idx = 0;
     for (auto&& [name, type] : entries) {
@@ -83,6 +83,7 @@ void DB::createTable(
         }
     }
     stm << " )";
+    auto rows = con_.exec(stm.str());
 }
 
 
