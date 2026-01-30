@@ -1,0 +1,3 @@
+[submodule "src/sqlite_wrapper"]
+	path = src/sqlite_wrapper
+	url = https://github.com/Sqaz33/sqlite_wrapper.git

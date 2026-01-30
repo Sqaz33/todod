@@ -8,9 +8,10 @@ project(todoD)
 enable_testing()
 
 add_subdirectory("${CMAKE_SOURCE_DIR}/src/sqlite_wrapper")
-add_subdirectory("${CMAKE_SOURCE_DIR}/test/sqlite_wrapper")
 
 file(GLOB SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable(${PROJECT_NAME} ${SRC})
 target_link_libraries(${PROJECT_NAME} PRIVATE sqlite3_wrapper)
+
+
