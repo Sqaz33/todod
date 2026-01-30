@@ -10,14 +10,23 @@ namespace todo {
 class ToDoItem {
 public:
     ToDoItem(std::string name,
-            std::string description,
-            boost::posix_time::ptime term);
+             std::string description,
+             boost::posix_time::ptime term);
+
+    ToDoItem(std::string name,
+             std::string description,
+             std::string termISOTime);
+
 
     ToDoItem() = default;
 
 public:
     std::string toString() const;
     bool operator<(const ToDoItem& rhs) const;
+
+    const std::string& name() const noexcept;
+    const std::string& description() const noexcept;
+    std::string termAsISOString() const;
 
 private:
     std::string name_;

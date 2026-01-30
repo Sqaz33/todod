@@ -7,11 +7,14 @@
 #include "todo_item.hpp"
 #include "icontroller.hpp"
 
+#include "sqlite3_wrapper.hpp"
+
 namespace repository {
 
 class Repository : public observer::IObserver {
 public:
     Repository(
+        const std::filesystem::path& dbFile, 
         std::shared_ptr<controller::IController> controller);
 
 public:
@@ -23,7 +26,7 @@ private:
 
 private:
     std::shared_ptr<controller::IController> contr_;
-    std::set<todo::ToDoItem> items_;
+    sqlite3_wrapper::DB db_;
 };
 
 } // namespace repository
