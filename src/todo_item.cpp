@@ -32,7 +32,6 @@ bool ToDoItem::operator<(const ToDoItem& rhs) const {
     return term_ < rhs.term_;   
 }
 
-
 const std::string& ToDoItem::name() const noexcept {
     return name_;
 }
