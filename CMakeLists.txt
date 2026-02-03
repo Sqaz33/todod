@@ -15,8 +15,15 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/src/http_1_0_server")
 file(GLOB SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 add_executable(${PROJECT_NAME} ${SRC})
+
 target_link_libraries(${PROJECT_NAME} PRIVATE http_1_0_server)
 target_link_libraries(${PROJECT_NAME} PRIVATE sqlite3_wrapper)
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
+add_executable("${PROJECT_NAME}_cli" ${SRC})
+target_link_libraries("${PROJECT_NAME}_cli" PRIVATE http_1_0_server)
+target_link_libraries("${PROJECT_NAME}_cli" PRIVATE sqlite3_wrapper)
+target_link_libraries("${PROJECT_NAME}_cli" PRIVATE nlohmann_json::nlohmann_json)
+target_compile_definitions("${PROJECT_NAME}_cli" PRIVATE CLI)
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE LOG)

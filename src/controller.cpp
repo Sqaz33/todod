@@ -76,11 +76,11 @@ void CLIControoler::sendItem(const todo::ToDoItem& item) {
 
 void CLIControoler::notifyObservers_(event::event_t ev) {
     int event = static_cast<int>(ev);
-    update(event);
+    notify(event);
 }
 
-void CLIControoler::update(int ev) 
-{ subject::ISubject::update(ev); } 
+void CLIControoler::notify(int ev) 
+{ subject::ISubject::notify(ev); } 
 
 void CLIControoler::attach(
     std::shared_ptr<observer::IObserver> obs) 

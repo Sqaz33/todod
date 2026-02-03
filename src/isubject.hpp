@@ -18,7 +18,7 @@ public:
     virtual ~ISubject() = default;
 
 protected:
-    virtual void update(int newState) = 0;
+    virtual void notify(int newState) = 0;
 
     std::set<
         std::weak_ptr<observer::IObserver>,

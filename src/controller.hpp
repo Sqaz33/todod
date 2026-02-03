@@ -27,7 +27,7 @@ public: // ISubject interface
         std::shared_ptr<observer::IObserver> obs) override;
 
 protected: // ISubject interface
-    void update(int newState) override;
+    void notify(int newState) override;
 
 private:
     todo::ToDoItem last_;

@@ -36,12 +36,30 @@ const std::string& ToDoItem::name() const noexcept {
     return name_;
 }
 
+void ToDoItem::setName(std::string name) {
+    name_.swap(name);
+}
+
+
 const std::string& ToDoItem::description() const noexcept {
     return description_;
 }
 
+void ToDoItem::setDescription(std::string description) {
+    description_.swap(description);
+}
+
 std::string ToDoItem::termAsISOString() const {
     return boost::posix_time::to_iso_string(term_);
+}
+
+bool ToDoItem::setTermFromISOString(const std::string& iso) { // TODO !!!!!!!!!
+    try {
+        term_ = boost::posix_time::time_from_string(iso);
+    } catch (...) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace todo 

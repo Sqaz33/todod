@@ -3,7 +3,13 @@
 #include <iostream>
 #include <fstream>
 
+#ifdef CLI
 #include "controller.hpp"
+#else
+#include "server.hpp"
+#include "todod_request_handler.hpp"
+#endif
+
 #include "repository.hpp"
 
 int main() try {
@@ -12,13 +18,25 @@ int main() try {
     { std::fstream f(dbFile); }
 
     auto contr = 
+#ifdef CLI
         std::make_shared<controller::CLIControoler>();
+#else
+        std::make_shared<controller::TODODRequestHandler>();
+
+    auto server = http_server::createV10(
+        "localhost", "6666", contr, std::thread::hardware_concurrency());
+#endif
+
     auto rep = 
         std::make_shared<repository::Repository>(dbFile, contr);
     
     contr->attach(rep);
 
+#ifdef CLI
     contr->run();
+#else
+    server.run();
+#endif
 } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
 } catch (...) {

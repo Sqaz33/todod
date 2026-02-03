@@ -25,8 +25,13 @@ public:
     bool operator<(const ToDoItem& rhs) const;
 
     const std::string& name() const noexcept;
+    void setName(std::string name);
+
     const std::string& description() const noexcept;
+    void setDescription(std::string description);
+
     std::string termAsISOString() const;
+    bool setTermFromISOString(const std::string& iso);
 
 private:
     std::string name_;
