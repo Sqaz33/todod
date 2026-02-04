@@ -1,0 +1,98 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 5,
+    "patch": 0
+  }, 
+  "configurePresets": [
+    {
+        "name": "default",
+        "generator": "Ninja",
+        "binaryDir": "${sourceDir}/build/${presetName}",
+        "cacheVariables": {
+          "CMAKE_CXX_COMPILER": "/usr/bin/g++-14"
+        }
+    },
+    {
+        "name": "debug",
+        "inherits": "default",
+        "displayName": "Debug",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug"
+        }
+    },
+    {
+        "name": "release",
+        "inherits": "default",
+        "displayName": "Release",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release"
+        }
+    },
+    {
+        "name": "release-debug-info",
+        "inherits": "default",
+        "displayName": "RelWithDebugInf",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        }
+    },
+    {
+        "name": "addr-sanitize-debug",
+        "inherits": "debug",
+        "displayName": "AddanitizeDebug",
+        "cacheVariables": {
+          "ENABLE_ADDRESS_SANITIZER": "ON"
+        }
+    },
+    {
+        "name": "thread-sanitize-debug",
+        "inherits": "debug",
+        "displayName": "ThreadSanitizeDebug",
+        "cacheVariables": {
+          "ENABLE_THREAD_SANITIZER": "ON"
+        }
+    },
+    {
+        "name": "addr-sanitize-release-debug-info",
+        "inherits": "release-debug-info",
+        "displayName": "AddSinitizeRelWithDebugInfo",
+        "cacheVariables": {
+          "ENABLE_ADDRESS_SANITIZER": "ON"
+        }
+    },
+    {
+        "name": "thread-sanitize-release-debug-info",
+        "inherits": "release-debug-info",
+        "displayName": "ThreadSinitizeReleaseWithDebugInfo",
+        "cacheVariables": {
+          "ENABLE_THREAD_SANITIZER": "ON"
+        }
+    },
+    {
+        "name": "debug-with-log",
+        "inherits": "debug",
+        "displayName": "DebugWithLog",
+        "cacheVariables": {
+          "ENABLE_LOG": "ON"
+        }
+    },
+    {
+        "name": "release-with-log",
+        "inherits": "release",
+        "displayName": "ReleaseWithLog",
+        "cacheVariables": {
+          "ENABLE_LOG": "ON"
+        }
+    },
+    {
+      "name": "release-debug-info-LTO",
+      "inherits": "release-debug-info",
+      "displayName": "ReleaseWithDebugInformationLTO",
+      "cacheVariables": {
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true
+      }
+    }
+  ]
+}

@@ -16,7 +16,6 @@ void TODODRequestHandler::handle(
     using jsonn = nlohmann::json;
     using Header = http_server::Header;
 
-
     jsonn jsonRes;
     bool hasRes = false;
     auto st = Rep::status_type::bad_request;

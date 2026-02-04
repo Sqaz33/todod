@@ -25,8 +25,8 @@ private:
     void addItemFromController_();
 
 private:
-    std::shared_ptr<controller::IController> contr_;
     sqlite3_wrapper::DB db_;
+    std::shared_ptr<controller::IController> contr_;
 };
 
 } // namespace repository
