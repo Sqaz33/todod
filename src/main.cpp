@@ -23,8 +23,6 @@ int main(int argc, char** argv) try {
 #else
         std::make_shared<controller::TODODRequestHandler>();
 
-
-    
     // if (argc != 3) {
     //     std::cerr << "Using todod [addres] [port]\n";
     //     return 1;
