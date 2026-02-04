@@ -12,7 +12,7 @@
 
 #include "repository.hpp"
 
-int main() try {
+int main(int argc, char** argv) try {
     auto dbFile = "todo.db";
 
     { std::fstream f(dbFile); }
@@ -23,8 +23,14 @@ int main() try {
 #else
         std::make_shared<controller::TODODRequestHandler>();
 
-    auto server = http_server::createV10(
-        "localhost", "6666", contr, std::thread::hardware_concurrency());
+
+    
+    // if (argc != 3) {
+    //     std::cerr << "Using todod [addres] [port]\n";
+    //     return 1;
+    // } 
+    // auto server = http_server::createV10(argv[1], argv[2], contr);
+    auto server = http_server::createV10("localhost", "6666", contr);
 #endif
 
     auto rep = 

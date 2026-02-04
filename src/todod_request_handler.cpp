@@ -2,7 +2,6 @@
 #include "header.hpp"
 
 #include <sstream>
-#include <mutex>
 #include <vector>
 #include <iostream>
 
@@ -17,18 +16,13 @@ void TODODRequestHandler::handle(
     using jsonn = nlohmann::json;
     using Header = http_server::Header;
 
-    static std::mutex mut;
 
     jsonn jsonRes;
     bool hasRes = false;
     auto st = Rep::status_type::bad_request;
     if (req.method() == "GET" && req.uri() == "/todos/all") {
-        {
-            std::lock_guard lg(mut);
-            forSend_.clear();
-            notifyObservers_(event::event_t::USER_ASK_ALL_TODOS);      
-        }
-
+        forSend_.clear();
+        notifyObservers_(event::event_t::USER_ASK_ALL_TODOS);      
         std::vector<jsonn> items;
         for (auto&& i : forSend_) {
             jsonn item;
@@ -84,11 +78,7 @@ void TODODRequestHandler::handle(
                                     std::cout << "LOG: received item in json\n";
                                     std::cout << item << '\n';
 #endif // LOG
-                                {
-                                    std::lock_guard lg(mut);
-                                    forSend_.clear();
-                                    notifyObservers_(event::event_t::USER_ASK_ADD_TODO);      
-                                }
+                                notifyObservers_(event::event_t::USER_ASK_ADD_TODO);      
                                 st = Rep::status_type::ok;
                             }
                         } 
