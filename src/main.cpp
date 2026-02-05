@@ -1,7 +1,7 @@
-#include <memory>
 #include <exception>
-#include <iostream>
 #include <fstream>
+#include <iostream>
+#include <memory>
 
 #ifdef CLI
 #include "controller.hpp"
@@ -17,24 +17,20 @@ int main(int argc, char** argv) try {
 
     { std::fstream f(dbFile); }
 
-    auto contr = 
-#ifdef CLI
-        std::make_shared<controller::CLIControoler>();
-#else
-        std::make_shared<controller::TODODRequestHandler>();
+    auto contr = std::make_shared<controller::TODODRequestHandler>();
 
     // if (argc != 3) {
     //     std::cerr << "Using todod [addres] [port]\n";
     //     return 1;
-    // } 
+    // }
     // auto server = http_server::createV10(argv[1], argv[2], contr);
     auto server = http_server::createV10("localhost", "6666", contr);
-#endif
 
-    auto rep = 
-        std::make_shared<repository::Repository>(dbFile, contr);
-    
+    auto rep = std::make_shared<repository::Repository>(dbFile, contr);
+
     contr->attach(rep);
+    contr->setRepo(rep);
+    rep->attach(contr);
 
 #ifdef CLI
     contr->run();

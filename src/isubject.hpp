@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <memory>
 #include <set>
@@ -8,21 +8,19 @@
 namespace subject {
 
 struct ISubject {
-public:
-    virtual void attach(
-        std::shared_ptr<observer::IObserver> obs) = 0;
-    virtual void dettach(
-        std::shared_ptr<observer::IObserver> obs) = 0;
+   public:
+    virtual void attach(std::shared_ptr<observer::IObserver> obs) = 0;
+    virtual void dettach(std::shared_ptr<observer::IObserver> obs) = 0;
 
-public:
+   public:
     virtual ~ISubject() = default;
 
-protected:
+   protected:
     virtual void notify(int newState) = 0;
 
-    std::set<
-        std::weak_ptr<observer::IObserver>,
-        std::owner_less<std::weak_ptr<observer::IObserver>>> obs_;
+    std::set<std::weak_ptr<observer::IObserver>,
+             std::owner_less<std::weak_ptr<observer::IObserver>>>
+        obs_;
 };
 
-} //  namespace subject
+}  //  namespace subject
