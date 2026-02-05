@@ -12,14 +12,31 @@ namespace controller {
 void TODODRequestHandler::handle(
     const http_server::Request& req, http_server::Reply& rep)
 {   
+    handleGetAllTodos_(req, rep);
+    handleAddTodo_(req, rep);
+
+    rep.setStatus(http_server::Reply::status_type::bad_request);
+    if (rep.contentSize()) {
+        rep.addHeader( 
+            { http_server::Header::NAME_CONTENT_TYPE,
+              http_server::Header::VALUE_APPLICATION_JSON }
+        );
+        rep.addHeader(
+            { http_server::Header::NAME_CONTENT_LEN,
+              std::to_string(rep.contentSize()) }
+        );
+    } 
+}
+
+void TODODRequestHandler::handleGetAllTodos_(
+    const http_server::Request& req, http_server::Reply& rep) 
+{
     using Rep = http_server::Reply;
     using jsonn = nlohmann::json;
     using Header = http_server::Header;
 
-    jsonn jsonRes;
-    bool hasRes = false;
-    auto st = Rep::status_type::bad_request;
     if (req.method() == "GET" && req.uri() == "/todos/all") {
+        jsonn jsonRes;
         forSend_.clear();
         notifyObservers_(event::event_t::USER_ASK_ALL_TODOS);      
         std::vector<jsonn> items;
@@ -36,9 +53,18 @@ void TODODRequestHandler::handle(
         }
         jsonRes["items"] = std::move(items);
 
-        hasRes = true;
-        st = Rep::status_type::ok;
-    } else if (req.method() == "POST" && req.uri() == "/todos") {
+        rep.setContent(jsonRes.dump());
+        rep.setStatus(http_server::Reply::status_type::ok);
+    }
+}
+
+void TODODRequestHandler::handleAddTodo_(
+    const http_server::Request& req, http_server::Reply& rep)
+{
+    using Rep = http_server::Reply;
+    using jsonn = nlohmann::json;
+    using Header = http_server::Header;
+    if (req.method() == "POST" && req.uri() == "/todos") {
         bool hasHeaderJson = false;
 
         for (auto&& h : req.headers()) {
@@ -78,7 +104,7 @@ void TODODRequestHandler::handle(
                                     std::cout << item << '\n';
 #endif // LOG
                                 notifyObservers_(event::event_t::USER_ASK_ADD_TODO);      
-                                st = Rep::status_type::ok;
+                                rep.setStatus(http_server::Reply::status_type::ok);
                             }
                         } 
                     }
@@ -86,21 +112,6 @@ void TODODRequestHandler::handle(
             } 
         }  
     }
-
-    if (hasRes) {
-        std::string res = jsonRes.dump();
-        rep.addHeader( 
-            { http_server::Header::NAME_CONTENT_TYPE,
-              http_server::Header::VALUE_APPLICATION_JSON }
-        );
-        rep.addHeader(
-            { http_server::Header::NAME_CONTENT_LEN,
-              std::to_string(res.size()) }
-        );
-        rep.setContent(std::move(res));
-    } 
-
-    rep.setStatus(st);
 }
 
 const todo::ToDoItem& 

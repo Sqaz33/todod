@@ -33,7 +33,7 @@
     {
         "name": "release-debug-info",
         "inherits": "default",
-        "displayName": "RelWithDebugInf",
+        "displayName": "RelWithDebugInfo",
         "cacheVariables": {
           "CMAKE_BUILD_TYPE": "RelWithDebInfo"
         }

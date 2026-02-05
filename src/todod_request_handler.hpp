@@ -32,6 +32,10 @@ protected: // ISubject interface
 
 private:
     void notifyObservers_(event::event_t ev);
+    void handleGetAllTodos_(
+        const http_server::Request& req, http_server::Reply& rep);
+    void handleAddTodo_(
+        const http_server::Request& req, http_server::Reply& rep);
 
 private:
     todo::ToDoItem received_;
