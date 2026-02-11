@@ -16,12 +16,13 @@ void TODODRequestHandler::setRepo(
 
 void TODODRequestHandler::handle(const http_server::Request& req,
                                  http_server::Reply& rep) {
+    rep.setStatus(http_server::Reply::status_type::bad_request);
+
     handleGetAllTodos_(req, rep);
     handleAddTodo_(req, rep);
     handleChangeTodo_(req, rep);
     handleDeleteTodo_(req, rep);
 
-    rep.setStatus(http_server::Reply::status_type::bad_request);
     if (rep.contentSize()) {
         rep.addHeader({http_server::Header::NAME_CONTENT_TYPE,
                        http_server::Header::VALUE_APPLICATION_JSON});
