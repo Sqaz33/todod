@@ -76,6 +76,10 @@ void ToDoItem::setCompleted(bool c) noexcept {
     completed_ = c;
 }
 
+boost::gregorian::date ToDoItem::date() const {
+    return term_.date();
+}
+
 void ToDoItem::clear() {
     id_ = 0;
     name_.clear();

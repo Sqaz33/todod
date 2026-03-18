@@ -1,5 +1,7 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "event.hpp"
 #include "icontroller.hpp"
 #include "iobserver.hpp"
@@ -23,6 +25,7 @@ class TODODRequestHandler :
     const todo::ToDoItem& receiveItem() const override;
     void sendItem(const todo::ToDoItem& item) override;
     const std::set<std::string>& changes() const override;
+    const filter::Filter& filter() const override;
 
    public:  // ISubject interface
     void attach(std::shared_ptr<observer::IObserver> obs) override;
@@ -45,6 +48,10 @@ class TODODRequestHandler :
                            http_server::reply::Reply& rep);
     void handleDeleteTodo_(const http_server::request::Request& req,
                            http_server::reply::Reply& rep);
+    void handleGetConcreteTodos_(const http_server::request::Request& req,
+                        http_server::reply::Reply& rep);
+
+    std::vector<nlohmann::json> itemsToJsonNClear_();
 
    private:
     todo::ToDoItem received_;
@@ -52,6 +59,7 @@ class TODODRequestHandler :
     std::set<std::string> changes_;
     std::weak_ptr<repository::Repository> repo_;
     std::string errMsg_;
+    filter::Filter filter_;
 };
 
 }  // namespace controller

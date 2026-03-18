@@ -1,8 +1,10 @@
 #pragma once
 
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <ostream>
 #include <string>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/gregorian/gregorian.hpp>
 
 namespace todo {
 
@@ -35,6 +37,8 @@ class ToDoItem {
 
     bool completed() const noexcept;
     void setCompleted(bool c) noexcept;
+
+    boost::gregorian::date date() const;
 
     void clear();
 

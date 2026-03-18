@@ -71,22 +71,6 @@
         }
     },
     {
-        "name": "debug-with-log",
-        "inherits": "debug",
-        "displayName": "DebugWithLog",
-        "cacheVariables": {
-          "ENABLE_LOG": "ON"
-        }
-    },
-    {
-        "name": "release-with-log",
-        "inherits": "release",
-        "displayName": "ReleaseWithLog",
-        "cacheVariables": {
-          "ENABLE_LOG": "ON"
-        }
-    },
-    {
       "name": "release-debug-info-LTO",
       "inherits": "release-debug-info",
       "displayName": "ReleaseWithDebugInformationLTO",

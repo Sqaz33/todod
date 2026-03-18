@@ -18,6 +18,7 @@ static const std::string NAME_COL_NAME = "name";
 static const std::string DESC_COL_NAME = "desc";
 static const std::string TERM_COL_NAME = "term";
 static const std::string COMPLETED_COL_NAME = "completed";
+static const std::string DATE_COL_NAME = "date";
 
 class Repository : public observer::IObserver, public subject::ISubject {
    public:
@@ -42,13 +43,14 @@ class Repository : public observer::IObserver, public subject::ISubject {
     void addItemFromController_();
     void changeItemFromController_();
     void deleteItemFromController_();
+    void sendConcreteItemsToController_();
 
     void notifyObservers_(event::event_t ev);
 
    private:
     sqlite3_wrapper::DB db_;
     std::shared_ptr<controller::IController> contr_;
-    std::string errMsg_;
+    mutable std::string errMsg_;
 };
 
 }  // namespace repository

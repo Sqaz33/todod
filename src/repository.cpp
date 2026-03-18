@@ -14,7 +14,8 @@ Repository::Repository(const std::filesystem::path& dbFile,
                     {{NAME_COL_NAME, "TEXT"},
                      {DESC_COL_NAME, "TEXT"},
                      {TERM_COL_NAME, "TEXT"},
-                     {COMPLETED_COL_NAME, "BOOLEAN"}},
+                     {COMPLETED_COL_NAME, "BOOLEAN"},
+                     {DATE_COL_NAME, "TEXT"}},
                     {{COMPLETED_COL_NAME, "FALSE"}});
 }
 
@@ -28,6 +29,9 @@ void Repository::update(int newState) {
             break;
         case event_t::USER_ASK_ALL_TODOS:
             sendItemsToController_();
+            break;
+        case event_t::USER_ASK_CONCRETE_TODOS:
+            sendConcreteItemsToController_();
             break;
         case event_t::USER_ASK_CHANGE_TODO:
             changeItemFromController_();
@@ -55,12 +59,12 @@ const std::string& Repository::errMsg() const noexcept {
 }
 
 void Repository::sendItemsToController_() {
-    std::vector<todo::ToDoItem> items;
     auto dbRes =
-        db_.getAllRows<int, std::string, std::string, std::string, bool>(
+        db_.getAllRows<int, std::string, std::string, std::string, bool, std::string>(
             TABLE_NAME);
 
-    for (auto [id, name, desc, term, comp] : dbRes) {
+    std::vector<todo::ToDoItem> items;
+    for (auto [id, name, desc, term, comp, _] : dbRes) {
         items.emplace_back(name, desc, term, id, comp);
     }
     std::for_each(items.begin(), items.end(),
@@ -72,8 +76,11 @@ void Repository::addItemFromController_() {
     auto&& name = item.name();
     auto&& desc = item.description();
     auto&& term = item.termAsISOString();
-    db_.addRow(TABLE_NAME, {NAME_COL_NAME, DESC_COL_NAME, TERM_COL_NAME},
-               {name, desc, term});
+    auto&& date = item.date();
+    auto&& comp = item.completed() ? "TRUE" : "FALSE";
+    db_.addRow(TABLE_NAME, {NAME_COL_NAME, DESC_COL_NAME, TERM_COL_NAME, 
+                            DATE_COL_NAME, COMPLETED_COL_NAME},
+               {name, desc, term, boost::gregorian::to_iso_string(date), comp});
 }
 
 void Repository::changeItemFromController_() {
@@ -94,6 +101,7 @@ void Repository::changeItemFromController_() {
     if (changes.contains(TERM_COL_NAME)) {
         hasChange = true;
         vals.push_back({TERM_COL_NAME, item.termAsISOString()});
+        vals.push_back({DATE_COL_NAME, boost::gregorian::to_iso_string(item.date())});
     }
     std::string b = item.completed() ? "TRUE" : "FALSE";
     if (changes.contains(COMPLETED_COL_NAME)) {
@@ -143,6 +151,20 @@ void Repository::deleteItemFromController_() {
         notifyObservers_(event::event_t::ERROR);
         errMsg_.clear();
     }
+}
+
+void Repository::sendConcreteItemsToController_() {
+    auto&& filter = contr_->filter();
+    auto dbRes =
+        db_.getRows<int, std::string, std::string, std::string, bool, std::string>(
+            TABLE_NAME, {{DATE_COL_NAME, filter.date}});
+            
+    std::vector<todo::ToDoItem> items;
+    for (auto [id, name, desc, term, comp, _] : dbRes) {
+        items.emplace_back(name, desc, term, id, comp);
+    }
+    std::for_each(items.begin(), items.end(),
+                  [this](auto&& i) { contr_->sendItem(i); });
 }
 
 void Repository::notifyObservers_(event::event_t ev) {

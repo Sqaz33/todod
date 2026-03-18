@@ -1,7 +1,6 @@
 #include "todod_request_handler.hpp"
 
 #include <iostream>
-#include <nlohmann/json.hpp>
 #include <sstream>
 #include <vector>
 
@@ -29,6 +28,9 @@ TODODRequestHandler::TODODRequestHandler(http_server::Server& server) {
 
     SERVER_ROUTE(server, "/todos").method(method::Method::DELETE)
     ([this](const request::Request& req, reply::Reply& rep){ handleDeleteTodo_(req, rep); });
+
+    SERVER_ROUTE(server, "/todos").method(method::Method::GET)
+    ([this](const request::Request& req, reply::Reply& rep){ handleGetConcreteTodos_(req, rep); });
 }
 
 void TODODRequestHandler::setRepo(
@@ -46,6 +48,10 @@ void TODODRequestHandler::sendItem(const todo::ToDoItem& item) {
 
 const std::set<std::string>& TODODRequestHandler::changes() const {
     return changes_;
+}
+
+const filter::Filter& TODODRequestHandler::filter() const {
+    return filter_;
 }
 
 void TODODRequestHandler::attach(std::shared_ptr<observer::IObserver> obs) {
@@ -77,27 +83,21 @@ void TODODRequestHandler::notifyObservers_(event::event_t ev) {
 void TODODRequestHandler::handleGetAllTodos_(const http_server::request::Request& req,
                                              http_server::reply::Reply& rep) {
     jsonn jsonRes;
-    forSend_.clear();
     notifyObservers_(event::event_t::USER_ASK_ALL_TODOS);
-    std::vector<jsonn> items;
-    for (auto&& i : forSend_) {
-        jsonn item;
-        item[repository::ID_COL_NAME] = i.id();
-        item[repository::NAME_COL_NAME] = i.name();
-        item[repository::DESC_COL_NAME] = i.description();
-        item[repository::TERM_COL_NAME] = i.termAsISOString();
-        item[repository::COMPLETED_COL_NAME] = i.completed();
-#ifdef LOG
-        std::cout << "LOG: packaging in json\n";
-        std::cout << item << '\n';
-#endif  // LOG
-        items.push_back(std::move(item));
+    jsonRes["items"] = itemsToJsonNClear_();
+
+    if (errMsg_.empty()) {
+        rep.setStatus(http_server::reply::Status::OK);
+        rep.setContent(jsonRes.dump());
+    } else {
+        rep.setStatus(
+            http_server::reply::Status::BAD_REQUEST);
+        jsonn err;
+        err["err"] = true;
+        err["err_msg"] = std::move(err);
+        rep.setContent(err.dump());
+        errMsg_.clear();
     }
-    jsonRes["items"] = std::move(items);
-
-    rep.setContent(jsonRes.dump());
-
-    rep.setStatus(http_server::reply::Status::OK);
 
     rep.addHeader({http_server::header::key::CONTENT_TYPE,
                     http_server::header::mime_types::JSON});
@@ -117,6 +117,7 @@ void TODODRequestHandler::handleAddTodo_(const http_server::request::Request& re
         }
     }
 
+    bool ok = false;
     if (hasHeaderJson) {
         auto json = jsonn::parse(req.content(), nullptr, false, true);
         if (!json.is_discarded()) {
@@ -139,34 +140,29 @@ void TODODRequestHandler::handleAddTodo_(const http_server::request::Request& re
                         {
                             received_.setName(std::move(name));
                             received_.setDescription(std::move(desc));
-#ifdef LOG
-                            std::cout << "LOG: received item in json\n";
-                            std::cout << item << '\n';
-#endif  // LOG
                             notifyObservers_(
                                 event::event_t::USER_ASK_ADD_TODO);
-
-                            rep.setStatus(
-                                http_server::reply::Status::OK);
-                            jsonn ok;
-                            ok["err"] = false;
-                            ok["err_msg"] = "OK"; 
-                            rep.setContent(ok.dump());
-                        } else {
-                            jsonn err;
-                            err["err"] = true;
-                            err["err_msg"] = "Incorect Data Format";
-                            rep.setContent(err.dump());
-                        }
-                    } else {
-                        jsonn err;
-                        err["err"] = true;
-                        err["err_msg"] = "Incorect Data Format";
-                        rep.setContent(err.dump());
-                    }
+                            ok = true;
+                        } 
+                    } 
                 }
             }
         }
+    }
+
+    if (ok && errMsg_.empty()) {
+        rep.setStatus(http_server::reply::Status::OK);
+        jsonn ok;
+        ok["err"] = false;
+        ok["err_msg"] = "OK";
+        rep.setContent(ok.dump());
+    } else {
+        rep.setStatus(
+            http_server::reply::Status::BAD_REQUEST);
+        jsonn err;
+        err["err"] = true;
+        err["err_msg"] = ok ? std::move(err) : "Incorect Data Format";
+        rep.setContent(err.dump());
     }
 
     rep.addHeader({http_server::header::key::CONTENT_TYPE,
@@ -187,7 +183,7 @@ void TODODRequestHandler::handleChangeTodo_(const http_server::request::Request&
             break;
         }
     }
-
+    bool ok = false;
     if (hasHeaderJson) {
         auto json = jsonn::parse(req.content(), nullptr, false, true);
         if (!json.is_discarded()) {
@@ -245,41 +241,37 @@ void TODODRequestHandler::handleChangeTodo_(const http_server::request::Request&
                             incorrectFormat = true;
                         }
                     }
-
-                    if (incorrectFormat) {
-                        errMsg_ = "Incorect Data Format";
+                    
+                    if (!incorrectFormat) {
+                        received_.setId(id);
+                        received_.setName(std::move(name));
+                        received_.setDescription(std::move(desc));
+                        received_.setTermFromISOString(std::move(term));
+                        received_.setCompleted(completed);
+                        notifyObservers_(event::event_t::USER_ASK_CHANGE_TODO);
+                        ok = true;
+                        changes_.clear();
+                        received_.clear();
                     }
-
-                    received_.setId(id);
-                    received_.setName(std::move(name));
-                    received_.setDescription(std::move(desc));
-                    received_.setTermFromISOString(std::move(term));
-                    received_.setCompleted(completed);
-#ifdef LOG
-                    std::cout << "LOG: received item in json\n";
-                    std::cout << item << '\n';
-#endif  // LOG
-                    notifyObservers_(event::event_t::USER_ASK_CHANGE_TODO);
-                    if (errMsg_.empty()) {
-                        rep.setStatus(http_server::reply::Status::OK);
-                        jsonn ok;
-                        ok["err"] = false;
-                        ok["err_msg"] = "OK";
-                        rep.setContent(ok.dump());
-                    } else {
-                        rep.setStatus(
-                            http_server::reply::Status::BAD_REQUEST);
-                        jsonn err;
-                        err["err"] = true;
-                        err["err_msg"] = errMsg_;
-                        rep.setContent(err.dump());
-                        errMsg_.clear();
-                    }
-                    changes_.clear();
-                    received_.clear();
                 }
             }
         }
+    }
+
+    if (ok && errMsg_.empty()) {
+        rep.setStatus(http_server::reply::Status::OK);
+        jsonn ok;
+        ok["err"] = false;
+        ok["err_msg"] = "OK";
+        rep.setContent(ok.dump());
+    } else {
+        rep.setStatus(
+            http_server::reply::Status::BAD_REQUEST);
+        jsonn err;
+        err["err"] = true;
+        err["err_msg"] = errMsg_.empty() ? "Incorect Data Format" : std::move(errMsg_);
+        rep.setContent(err.dump());
+        errMsg_.clear();
     }
 
     rep.addHeader({http_server::header::key::CONTENT_TYPE,
@@ -311,10 +303,6 @@ void TODODRequestHandler::handleDeleteTodo_(const http_server::request::Request&
                         item[repository::ID_COL_NAME].is_number_integer()) 
                     {
                         received_.setId(item[repository::ID_COL_NAME]);
-#ifdef LOG
-                        std::cout << "LOG: received item in json\n";
-                        std::cout << item << '\n';
-#endif  // LOG
                         notifyObservers_(
                             event::event_t::USER_ASK_DELETE_TODO);
                         ok = true;
@@ -323,8 +311,7 @@ void TODODRequestHandler::handleDeleteTodo_(const http_server::request::Request&
             }
         } 
     }
-
-    if (ok) {
+    if (ok && errMsg_.empty()) {
         rep.setStatus(http_server::reply::Status::OK);
         jsonn ok;
         ok["err"] = false;
@@ -335,14 +322,87 @@ void TODODRequestHandler::handleDeleteTodo_(const http_server::request::Request&
             http_server::reply::Status::BAD_REQUEST);
         jsonn err;
         err["err"] = true;
-        err["err_msg"] = "Incorect Data Format";
+        err["err_msg"] = ok ? std::move(errMsg_) : "Incorect Data Format";
         rep.setContent(err.dump());
+        errMsg_.clear();
     }
 
     rep.addHeader({http_server::header::key::CONTENT_TYPE,
                     http_server::header::mime_types::JSON});
     rep.addHeader({http_server::header::key::CONTENT_LEN,
                     std::to_string(rep.contentSize())});
+}
+
+void TODODRequestHandler::handleGetConcreteTodos_(
+    const http_server::request::Request& req,
+    http_server::reply::Reply& rep)
+{
+    bool hasHeaderJson = false;
+    filter_.clear();
+
+    for (auto&& h : req.headers()) {
+        if (h.name == http_server::header::key::CONTENT_TYPE &&
+            h.value == http_server::header::mime_types::JSON) {
+            hasHeaderJson = true;
+            break;
+        }
+    }
+
+    bool ok = false;
+    jsonn jsonRes;
+
+    if (hasHeaderJson) {
+        auto json = jsonn::parse(req.content(), nullptr, false, true);
+        if (!json.is_discarded()) {
+            if (json.contains("filter")) {
+                auto filter = json["filter"];
+                if (filter.is_object()) {
+                    if (filter.contains(repository::DATE_COL_NAME)) {
+                        auto date = filter[repository::DATE_COL_NAME];
+                        if (date.is_string()) {
+                            filter_.date = date;
+                            ok = true;
+                            notifyObservers_(event::event_t::USER_ASK_CONCRETE_TODOS);
+                            jsonRes["items"] = itemsToJsonNClear_();
+                        } 
+                    } 
+                }
+            }
+        }
+    }
+
+    if (ok && errMsg_.empty()) {
+        rep.setStatus(http_server::reply::Status::OK);
+        rep.setContent(jsonRes.dump());
+    } else {
+        rep.setStatus(
+            http_server::reply::Status::BAD_REQUEST);
+        jsonn err;
+        err["err"] = true;
+        err["err_msg"] = errMsg_.empty() ? "Incorect Data Format" : std::move(errMsg_);
+        rep.setContent(err.dump());
+        errMsg_.clear();
+    }
+
+    rep.addHeader({http_server::header::key::CONTENT_TYPE,
+                    http_server::header::mime_types::JSON});
+    rep.addHeader({http_server::header::key::CONTENT_LEN,
+                    std::to_string(rep.contentSize())});
+}
+
+std::vector<nlohmann::json> TODODRequestHandler::itemsToJsonNClear_() {
+    std::vector<jsonn> items;
+    for (auto&& i : forSend_) {
+        jsonn item;
+        item[repository::ID_COL_NAME] = i.id();
+        item[repository::NAME_COL_NAME] = i.name();
+        item[repository::DESC_COL_NAME] = i.description();
+        item[repository::TERM_COL_NAME] = i.termAsISOString();
+        item[repository::COMPLETED_COL_NAME] = i.completed();
+        items.push_back(std::move(item));
+    }
+    forSend_.clear();
+    return items;
 }
 
 }  // namespace controller

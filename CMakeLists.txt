@@ -28,10 +28,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE http_1_0_server)
 target_link_libraries(${PROJECT_NAME} PRIVATE sqlite3_wrapper)
 target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
-if (ENABLE_LOG) 
-    target_compile_definitions(${PROJECT_NAME} PRIVATE LOG)
-endif()
-
 if (ENABLE_THREAD_SANITIZER)
     add_thread_sanitizer(${PROJECT_NAME}) 
 endif()
