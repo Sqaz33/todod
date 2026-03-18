@@ -36,6 +36,8 @@ class ToDoItem {
     bool completed() const noexcept;
     void setCompleted(bool c) noexcept;
 
+    void clear();
+
    private:
     int id_;
     std::string name_;

@@ -51,7 +51,7 @@ std::string ToDoItem::termAsISOString() const {
     return boost::posix_time::to_iso_string(term_);
 }
 
-bool ToDoItem::setTermFromISOString(const std::string& iso) {  // TODO !!!!!!!!!
+bool ToDoItem::setTermFromISOString(const std::string& iso) {  // TODO <3
     try {
         term_ = boost::posix_time::from_iso_string(iso);
     } catch (...) {
@@ -74,6 +74,13 @@ bool ToDoItem::completed() const noexcept {
 
 void ToDoItem::setCompleted(bool c) noexcept {
     completed_ = c;
+}
+
+void ToDoItem::clear() {
+    id_ = 0;
+    name_.clear();
+    description_.clear();
+    completed_ = false;
 }
 
 }  // namespace todo

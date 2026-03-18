@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
 
 include(cmake/address_sanitizer.cmake) 
 include(cmake/thread_sanitizer.cmake)
@@ -7,17 +7,20 @@ option(ENABLE_THREAD_SANITIZER OFF)
 option(ENABLE_ADDRESS_SANITIZER OFF)
 option(ENABLE_LOG OFF)
 
-project(todoD)
+project(todod)
 
 find_package(nlohmann_json 3 REQUIRED)
 
 enable_testing()
 
+if(POLICY CMP0069)
+    cmake_policy(SET CMP0069 NEW)
+endif()
+
 add_subdirectory("${CMAKE_SOURCE_DIR}/src/sqlite_wrapper")
 add_subdirectory("${CMAKE_SOURCE_DIR}/src/http_1_0_server")
 
 file(GLOB SRC "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
-
 add_executable(${PROJECT_NAME} ${SRC})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 20)
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD_REQUIRED TRUE)

@@ -41,7 +41,7 @@
     {
         "name": "addr-sanitize-debug",
         "inherits": "debug",
-        "displayName": "AddanitizeDebug",
+        "displayName": "AddressSanitizeDebug",
         "cacheVariables": {
           "ENABLE_ADDRESS_SANITIZER": "ON"
         }
@@ -57,7 +57,7 @@
     {
         "name": "addr-sanitize-release-debug-info",
         "inherits": "release-debug-info",
-        "displayName": "AddSinitizeRelWithDebugInfo",
+        "displayName": "AddressSanitizeRelWithDebugInfo",
         "cacheVariables": {
           "ENABLE_ADDRESS_SANITIZER": "ON"
         }
@@ -65,7 +65,7 @@
     {
         "name": "thread-sanitize-release-debug-info",
         "inherits": "release-debug-info",
-        "displayName": "ThreadSinitizeReleaseWithDebugInfo",
+        "displayName": "ThreadSanitizeReleaseWithDebugInfo",
         "cacheVariables": {
           "ENABLE_THREAD_SANITIZER": "ON"
         }
@@ -90,6 +90,14 @@
       "name": "release-debug-info-LTO",
       "inherits": "release-debug-info",
       "displayName": "ReleaseWithDebugInformationLTO",
+      "cacheVariables": {
+        "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true
+      }
+    },
+      {
+      "name": "release-LTO",
+      "inherits": "release",
+      "displayName": "ReleaseWithLTO",
       "cacheVariables": {
         "CMAKE_INTERPROCEDURAL_OPTIMIZATION": true
       }

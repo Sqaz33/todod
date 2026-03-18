@@ -3,24 +3,21 @@
 #include "event.hpp"
 #include "icontroller.hpp"
 #include "iobserver.hpp"
-#include "irequest_handler.hpp"
 #include "isubject.hpp"
 #include "repository.hpp"
 #include "server.hpp"
 
 namespace controller {
 
-class TODODRequestHandler
-    : public http_server::request_handler::IRequestHandler,
+class TODODRequestHandler :
       public controller::IController,
       public subject::ISubject,
       public observer::IObserver {
    public:
+     TODODRequestHandler(http_server::Server& server);
+    
+   public:
     void setRepo(std::shared_ptr<repository::Repository> repo);
-
-   public:  // IRequestHandler
-    void handle(const http_server::Request& req,
-                http_server::Reply& rep) override;
 
    public:  // IController
     const todo::ToDoItem& receiveItem() const override;
@@ -39,15 +36,15 @@ class TODODRequestHandler
 
    private:
     void notifyObservers_(event::event_t ev);
-
-    void handleGetAllTodos_(const http_server::Request& req,
-                            http_server::Reply& rep);
-    void handleAddTodo_(const http_server::Request& req,
-                        http_server::Reply& rep);
-    void handleChangeTodo_(const http_server::Request& req,
-                           http_server::Reply& rep);
-    void handleDeleteTodo_(const http_server::Request& req,
-                           http_server::Reply& rep);
+        
+    void handleGetAllTodos_(const http_server::request::Request& req,
+                            http_server::reply::Reply& rep);
+    void handleAddTodo_(const http_server::request::Request& req,
+                        http_server::reply::Reply& rep);
+    void handleChangeTodo_(const http_server::request::Request& req,
+                           http_server::reply::Reply& rep);
+    void handleDeleteTodo_(const http_server::request::Request& req,
+                           http_server::reply::Reply& rep);
 
    private:
     todo::ToDoItem received_;
