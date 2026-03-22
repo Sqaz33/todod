@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'docker:20.10.16' 
+            image 'docker:20.10.16'
             args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
@@ -13,7 +13,10 @@ pipeline {
         }
         stage('Deploy') {
             steps {
-                sh 'docker rm -f todod; docker run -d -p 6666:6666 -v todod_data:/data --name todod todod:0.2'
+                sh '''
+                docker rm -f todod || true
+                docker run -d -p 6666:6666 -v todod_data:/data --name todod todod:0.2
+                '''
             }
         }
     }
