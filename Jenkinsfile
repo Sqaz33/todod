@@ -1,7 +1,4 @@
 pipeline {
-    agent {
-        docker { image 'docker:24.0.2-cli' }
-    }
     stages {
         stage('Build') {
             steps {
