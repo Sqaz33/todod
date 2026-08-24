@@ -48,7 +48,7 @@ bool validateScript(const HandlerScript& script) {
         return false;
     }
 
-    sol::environment env(lua);
+    sol::environment env(lua, sol::create);
 
     auto&& todo = lua.create_table();
     todo["id"] = std::int64_t{1};
@@ -63,9 +63,10 @@ bool validateScript(const HandlerScript& script) {
     env["set_priority"] = [](std::int64_t id, int priority) { };
     env["log"] = [](const std::string& msg) { };
 
-    sol::protected_function protScript(loaded);
-    sol::set_environment(env, protScript);
-    sol::protected_function_result res = protScript();
+    auto&& res = lua.safe_script(
+        script.source, 
+        env, 
+        sol::script_pass_on_error);
 
     return res.valid();
 }  
