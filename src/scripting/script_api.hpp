@@ -1,5 +1,6 @@
 #pragma once
 
+#define SOL_ALL_SAFETIES_ON 1
 #include "sol.hpp"
 
 #include <cstdint>
@@ -43,6 +44,6 @@ void registerScript(
     const ScriptTodo& todo,
     ScriptContext& ctx);
 
-void validateScript(HandlerScript& script);
+bool validateScript(const HandlerScript& script);
 
 } // namespace todod::scripting::api 

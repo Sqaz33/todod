@@ -1,19 +1,6 @@
 #include "script_api.hpp"
 
-namespace {
-
-bool validateLua(HandlerScript& script) {
-    sol::state lua;
-    auto&& loaded = lua.load(
-        script.
-    ) 
-}
-
-bool validateExecution(HandlerScript& script) {
-
-}
-
-} // namespace
+#include "domain/script.hpp"
 
 namespace todod::scripting::api {
 
@@ -47,8 +34,40 @@ void registerScript(
 }
 
 
-void validateScript(HandlerScript& script) {
-    return validateLua(script) && validateExecution(script);
+// TODO вернуть ошибку
+bool validateScript(const HandlerScript& script) {
+    sol::state lua;
+    
+    auto&& loaded = lua.load(
+        script.source,
+        "user_script",
+        sol::load_mode::text
+    );
+
+    if (!loaded.valid()) {
+        return false;
+    }
+
+    sol::environment env(lua);
+
+    auto&& todo = lua.create_table();
+    todo["id"] = std::int64_t{1};
+    todo["title"] = "test";
+    todo["description"] = "test";
+    todo["priority"] = 1u;
+    todo["completed"] = false;
+
+    env["todo"] = todo;
+
+    env["complete"] = [](std::int64_t id) { };
+    env["set_priority"] = [](std::int64_t id, int priority) { };
+    env["log"] = [](const std::string& msg) { };
+
+    sol::protected_function protScript(loaded);
+    sol::set_environment(env, protScript);
+    sol::protected_function_result res = protScript();
+
+    return res.valid();
 }  
 
 } // namespace todod::scripting::api 

@@ -9,6 +9,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(SQLiteCpp REQUIRED)
+find_package(Lua 5.4 REQUIRED)
 
 file(GLOB_RECURSE SRC "src/*.cpp")
 
@@ -18,8 +19,14 @@ target_link_libraries(todod PRIVATE SQLiteCpp)
 
 target_include_directories(${PROJECT_NAME} 
     PRIVATE 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/crow"
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party"
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/sol"
-    )
+        "${LUA_INCLUDE_DIR}"
+    
+)    
+    
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${LUA_LIBRARIES}
+)
