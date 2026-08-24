@@ -33,16 +33,16 @@ ScriptRepository::ScriptRepository(std::shared_ptr<db::DataBase> db) :
         NAME_COLUMN,
         SOURCE_COLUMN,
         EVENT_COLUMN,
-        ENABLED_COLUMN)),
-    getAllQuery_(db_->connection(), std::format(
+        ENABLED_COLUMN))
+    , getAllQuery_(db_->connection(), std::format(
         "SELECT {}, {}, {}, {}, {} FROM {}",
         ID_COLUMN,
         NAME_COLUMN,
         SOURCE_COLUMN,
         EVENT_COLUMN,
         ENABLED_COLUMN,
-        TABLE_NAME)),
-    updateQuery_(db_->connection(), std::format(
+        TABLE_NAME))
+    , updateQuery_(db_->connection(), std::format(
         R"(
             UPDATE {}
             SET {} = ?,
@@ -56,8 +56,8 @@ ScriptRepository::ScriptRepository(std::shared_ptr<db::DataBase> db) :
         SOURCE_COLUMN,
         EVENT_COLUMN,
         ENABLED_COLUMN,
-        ID_COLUMN)),
-    findByIdQuery_(db_->connection(), std::format(
+        ID_COLUMN))
+    , findByIdQuery_(db_->connection(), std::format(
         "SELECT {}, {}, {}, {}, {} FROM {} WHERE {} = ?",
         ID_COLUMN,
         NAME_COLUMN,
@@ -65,11 +65,16 @@ ScriptRepository::ScriptRepository(std::shared_ptr<db::DataBase> db) :
         EVENT_COLUMN,
         ENABLED_COLUMN,
         TABLE_NAME,
-        ID_COLUMN)),
-    removeQuery_(db_->connection(), std::format(
+        ID_COLUMN))
+    , removeQuery_(db_->connection(), std::format(
         "DELETE FROM {} WHERE {} = ?",
         TABLE_NAME,
         ID_COLUMN))
+    , findByEventQuery_(db_->connection(), std::format(
+        "SELECT * FROM {} WHERE {} = ?",
+        TABLE_NAME,
+        EVENT_COLUMN
+    ))
 {}
 
 HandlerScript ScriptRepository::create(
@@ -140,6 +145,20 @@ bool ScriptRepository::removeTodo(std::int64_t id) {
     removeQuery_.reset();
     removeQuery_.clearBindings();
     return removed;
+}
+
+std::vector<HandlerScript> 
+ScriptRepository::findByEvent(TodoEvent event) {
+    std::vector<HandlerScript> scripts;
+    findByEventQuery_.bind(1, static_cast<int>(event));
+
+    while (findByEventQuery_.executeStep()) {
+        scripts.emplace_back(readScript(findByEventQuery_));
+    }
+
+    findByEventQuery_.reset();
+    findByEventQuery_.clearBindings();
+    return scripts;
 }
 
 } // namespace todod::repository

@@ -16,7 +16,7 @@ struct ScriptTodo {
     std::int64_t id;
     std::string title;
     bool completed;
-    int priority;
+    unsigned priority;
 };
 
 struct SetTodoPriorityCommand {

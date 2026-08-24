@@ -26,6 +26,7 @@ public:
     bool updateTodo(const HandlerScript& script);
     std::optional<HandlerScript> findByID(std::int64_t id);
     bool removeTodo(std::int64_t id);
+    std::vector<HandlerScript> findByEvent(TodoEvent event);
 
 private:
     template <class... Ty>
@@ -44,6 +45,7 @@ private:
     SQLite::Statement updateQuery_;
     SQLite::Statement findByIdQuery_;
     SQLite::Statement removeQuery_;
+    SQLite::Statement findByEventQuery_;
 };
 
 } // namespace todod::repository

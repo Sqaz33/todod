@@ -29,6 +29,7 @@ public:
     std::optional<TodoPage> getPage(std::int32_t offset, std::int32_t limit);
     bool removeTodo(std::int64_t id);
     bool setCompleteStatus(std::int64_t id, bool status);
+    bool setPriority(std::int64_t id, int priority);
     std::int32_t getCount();
 
 private:
@@ -50,7 +51,8 @@ private:
     SQLite::Statement updateQuery_;
     SQLite::Statement findByIdQuery_;
     SQLite::Statement removeQuery_;
-    SQLite::Statement completeQuery_;
+    SQLite::Statement setCompleteQuery_;
+    SQLite::Statement setPriorityQuery_;
     SQLite::Statement getPageQeury_;
     SQLite::Statement getCountQuery_;
 };

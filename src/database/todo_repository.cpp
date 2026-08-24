@@ -67,7 +67,7 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
         TABLE_NAME,
         ID_COLUMN
     ))
-    , completeQuery_(db_->connection(), std::format(
+    , setCompleteQuery_(db_->connection(), std::format(
         "UPDATE {} SET {} = ? WHERE {} = ?",
         TABLE_NAME,
         COMPLETED_COLUMN,
@@ -87,6 +87,12 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
     , getCountQuery_(db_->connection(), std::format(
         "SELECT COUNT(*) FROM {}", 
         TABLE_NAME
+    ))
+    , setPriorityQuery_(db_->connection(), std::format(
+        "UPDATE {} SET {} = ? WHERE {} = ?",
+        TABLE_NAME,
+        PRIORITY_COLUMN,
+        ID_COLUMN
     ))
 {}
 
@@ -204,15 +210,31 @@ bool TodoRepository::removeTodo(std::int64_t id) {
 bool TodoRepository::setCompleteStatus(std::int64_t id, bool status) {
     std::lock_guard<std::mutex> lk(db_->mutex());
 
-    completeQuery_.bind(1, status);
-    completeQuery_.bind(2, id);
+    setCompleteQuery_.bind(1, status);
+    setCompleteQuery_.bind(2, id);
 
-    completeQuery_.exec();
+    setCompleteQuery_.exec();
     
     bool updated = db_->connection().getChanges() != 0;
 
-    completeQuery_.reset();
-    completeQuery_.clearBindings();
+    setCompleteQuery_.reset();
+    setCompleteQuery_.clearBindings();
+
+    return updated;
+}
+
+bool TodoRepository::setPriority(std::int64_t id, int priority) {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
+    setPriorityQuery_.bind(1, priority);
+    setPriorityQuery_.bind(2, id);
+
+    setPriorityQuery_.exec();
+    
+    bool updated = db_->connection().getChanges() != 0;
+
+    setPriorityQuery_.reset();
+    setPriorityQuery_.clearBindings();
 
     return updated;
 }
@@ -225,10 +247,9 @@ std::int32_t TodoRepository::getCount() {
 std::int32_t TodoRepository::getCountWithNoLock_() {
     getCountQuery_.exec();
     std::int32_t count = getCountQuery_.getColumn(0).getInt();
-    completeQuery_.reset();
-    completeQuery_.clearBindings();
+    setCompleteQuery_.reset();
+    setCompleteQuery_.clearBindings();
     return count;
 }
-
 
 } // namespace todod::repository
