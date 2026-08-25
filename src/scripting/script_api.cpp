@@ -1,6 +1,7 @@
 #include "script_api.hpp"
 
 #include "domain/script.hpp"
+#include "script_limits.hpp"
 
 namespace todod::scripting::api {
 
@@ -13,7 +14,7 @@ void registerScript(
     lua.new_usertype<ScriptTodo>(
         "Todo",
         "id", sol::readonly(&ScriptTodo::id),
-        "titile", sol::readonly(&ScriptTodo::title),
+        "title", sol::readonly(&ScriptTodo::title),
         "completed", sol::readonly(&ScriptTodo::completed),
         "priority", sol::readonly(&ScriptTodo::priority)
     );
@@ -62,6 +63,13 @@ bool validateScript(const HandlerScript& script) {
     env["complete"] = [](std::int64_t id) { };
     env["set_priority"] = [](std::int64_t id, int priority) { };
     env["log"] = [](const std::string& msg) { };
+
+    
+    limits::ScriptExecutionLimit limit(      
+      lua,
+      std::chrono::milliseconds{100},
+      1'000'000
+    );
 
     auto&& res = lua.safe_script(
         script.source, 

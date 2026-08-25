@@ -43,7 +43,15 @@ bool checkTodoWithNoIdInJson(const crow::json::rvalue& json) {
         return false;
     }
 
+    if (json["priority"].nt() != crow::json::num_type::Unsigned_integer) {
+        return false;
+    }
+
     if (json["completedAt"].t() != crow::json::type::String) {
+        return false;
+    }
+
+    if (!helpers::isValidIso8601(json["completedAt"].s())) {
         return false;
     }
 
@@ -106,7 +114,9 @@ std::optional<TodoTask> createTodo(
 
 std::pair<bool, int> intFromChars(std::string_view chars) {
     int value {};
-    if (std::from_chars(chars.data(), chars.data() + chars.size(), value).ec == std::errc{}) {
+    auto&& res = std::from_chars(chars.data(), chars.data() + chars.size(), value);
+
+    if (res.ec == std::errc{} && res.ptr == chars.data() + chars.size()) {
         return {true, value};
     } else {
         return {false, -1};
@@ -164,6 +174,12 @@ void registerTodoRoutes(
         methods(crow::HTTPMethod::POST)
     ([&todoService] (const crow::request& req, crow::response& res) {
         auto jsonTodo = crow::json::load(req.body);
+        if (!jsonTodo) {
+            res.code = 400;
+            res.end();
+            return;
+        }
+
         if (auto todo = createTodo(jsonTodo, todoService)) {
             res = todoToJson(todo.value());
             res.code = 200;

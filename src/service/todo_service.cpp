@@ -24,7 +24,9 @@ TodoTask TodoService::create(
         completedAt, 
         completed);
     scripting_->runHandlers(task, TodoEvent::ADDED_TODO);
-    return std::move(task);
+
+    auto&& newTaskAfterHandlers = repository_->findByID(task.id);
+    return newTaskAfterHandlers.value();
 }
 
 std::vector<TodoTask> TodoService::getAllTodos() {

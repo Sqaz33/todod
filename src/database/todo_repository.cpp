@@ -245,10 +245,10 @@ std::int32_t TodoRepository::getCount() {
 }
 
 std::int32_t TodoRepository::getCountWithNoLock_() {
-    getCountQuery_.exec();
+    getCountQuery_.executeStep();
     std::int32_t count = getCountQuery_.getColumn(0).getInt();
-    setCompleteQuery_.reset();
-    setCompleteQuery_.clearBindings();
+    getCountQuery_.reset();
+    getCountQuery_.clearBindings();
     return count;
 }
 

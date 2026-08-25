@@ -9,7 +9,7 @@ DataBase::DataBase(const std::string& path) :
         SQLite::OPEN_CREATE
     ) 
 {
-    db_.exec("PRAGMA foreign_key = ON");
+    db_.exec("PRAGMA foreign_keys = ON");
 }
 
 SQLite::Database& DataBase::connection() noexcept {

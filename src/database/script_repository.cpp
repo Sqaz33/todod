@@ -83,6 +83,8 @@ HandlerScript ScriptRepository::create(
     TodoEvent event,
     bool enabled)
 {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
     insert_(name, source, static_cast<int>(event), enabled);
 
     return HandlerScript{
@@ -94,6 +96,8 @@ HandlerScript ScriptRepository::create(
 }
 
 std::vector<HandlerScript> ScriptRepository::getAll() {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
     std::vector<HandlerScript> scripts;
 
     while (getAllQuery_.executeStep()) {
@@ -106,6 +110,8 @@ std::vector<HandlerScript> ScriptRepository::getAll() {
 }
 
 bool ScriptRepository::updateTodo(const HandlerScript& script) {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
     updateQuery_.bind(1, script.name);
     updateQuery_.bind(2, script.source);
     updateQuery_.bind(3, static_cast<int>(script.event));
@@ -121,6 +127,8 @@ bool ScriptRepository::updateTodo(const HandlerScript& script) {
 }
 
 std::optional<HandlerScript> ScriptRepository::findByID(std::int64_t id) {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
     findByIdQuery_.bind(1, id);
 
     if (!findByIdQuery_.executeStep()) {
@@ -137,6 +145,8 @@ std::optional<HandlerScript> ScriptRepository::findByID(std::int64_t id) {
 }
 
 bool ScriptRepository::removeTodo(std::int64_t id) {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+    
     removeQuery_.bind(1, id);
     removeQuery_.exec();
 
@@ -149,6 +159,8 @@ bool ScriptRepository::removeTodo(std::int64_t id) {
 
 std::vector<HandlerScript> 
 ScriptRepository::findByEvent(TodoEvent event) {
+    std::lock_guard<std::mutex> lk(db_->mutex());
+
     std::vector<HandlerScript> scripts;
     findByEventQuery_.bind(1, static_cast<int>(event));
 

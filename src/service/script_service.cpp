@@ -17,9 +17,11 @@ void ScriptService::runHandlers(
 {
     auto&& scripts = scriptRepo_->findByEvent(event);
     for (auto&& script : scripts) {
-        auto [ok, commands, _] = engine_->execute(script, todo);
-        if (ok) {
-            executeCommands_(commands);
+        if (script.enabled) {
+            auto [ok, commands, _] = engine_->execute(script, todo);
+            if (ok) {
+                executeCommands_(commands);
+            }
         }
     }
 }
@@ -43,7 +45,9 @@ void ScriptService::executeCommands_(
     // TODO: ошибка испольнения комманды (нет id)
     for (auto&& command : commands) {
         if (auto* setPriority = std::get_if<SetTodoPriorityCommand>(&command)) {
-            todoRepo_->setPriority(setPriority->id, setPriority->priority);
+            if (setPriority->priority >= 0) {
+                todoRepo_->setPriority(setPriority->id, setPriority->priority);
+            }
         } else if (auto* complete = std::get_if<CompleteTodoCommand>(&command)) {
             todoRepo_->setCompleteStatus(complete->id, true);
         }

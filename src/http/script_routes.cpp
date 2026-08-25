@@ -4,6 +4,7 @@
 #include <string>
 #include <charconv>
 #include <string_view>
+#include <limits>
 
 
 namespace todod::http::routes {
@@ -39,6 +40,32 @@ bool checkHandlerScriptWithNoIdInJson(const crow::json::rvalue& json) {
         return false;
     }
 
+    TodoEvent event;
+    switch (json["event"].nt()) {
+        case crow::json::num_type::Signed_integer:
+            auto i = json["event"].i();
+            if (i < std::numeric_limits<int>::min() || 
+                i > std::numeric_limits<int>::max()) 
+            {
+                return false;
+            }
+            event = static_cast<TodoEvent>(i);
+            break;
+        case crow::json::num_type::Unsigned_integer:
+            auto u = json["event"].u();
+            if (u > std::numeric_limits<int>::max()) {
+                return false;
+            }
+            event = static_cast<TodoEvent>(json["event"].u());
+            break;
+        default:
+            return false;
+    }
+
+    if (!ALL_EVENTS.contains(event)) {
+        return false;
+    }
+
     auto&& enabledTy = json["enabled"].t();
     if (enabledTy != crow::json::type::False && 
         enabledTy != crow::json::type::True) 
@@ -60,7 +87,7 @@ std::optional<HandlerScript> createHandlerScript(
     auto&& name    = json["name"].s();      
     auto&& source  = json["source"].s();  
     auto&& event   = static_cast<TodoEvent>(json["event"].i());    
-    auto&& enabled = json["enabled"].i() != 0;
+    auto&& enabled = json["enabled"].b();
 
     return service.create(name, source, event, enabled);
 }   
@@ -75,6 +102,12 @@ void registerScriptRoutes(
         methods(crow::HTTPMethod::POST)
     ([&scriptService] (const crow::request& req, crow::response& res) {
         auto jsonScript = crow::json::load(req.body);
+        if (!jsonScript) {
+            res.code = 400;
+            res.end();
+            return;
+        }
+
         if (auto handlerScript = createHandlerScript(jsonScript, scriptService)) {
             res.code = 200;
             res = handlerScriptToJson(handlerScript.value());
