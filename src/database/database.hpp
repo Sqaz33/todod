@@ -8,7 +8,7 @@ namespace todod::db {
 
 class DataBase { 
 public:
-    explicit DataBase(std::string& path);
+    explicit DataBase(const std::string& path);
 
 public:
     SQLite::Database& connection() noexcept;

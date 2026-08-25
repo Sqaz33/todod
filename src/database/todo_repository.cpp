@@ -79,7 +79,7 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
             FROM {}
             ORDER BY {} DESC
             LIMIT ? 
-            OFSET ?
+            OFFSET ?
         )",
         TABLE_NAME,
         ID_COLUMN

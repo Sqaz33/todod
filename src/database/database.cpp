@@ -2,7 +2,7 @@
 
 namespace todod::db {
 
-DataBase::DataBase(std::string& path) : 
+DataBase::DataBase(const std::string& path) : 
     db_(
         path, 
         SQLite::OPEN_READWRITE | 

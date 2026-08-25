@@ -1,11 +1,5 @@
-#include "crow_all.h"
+#include "app/application.hpp"
 
 int main() {
-    crow::SimpleApp app;
-
-    CROW_ROUTE(app, "/")([](){
-        return "Hello world";
-    });
-
-    app.port(18080).multithreaded().run();
+    todod::app::TododApp app;
 }
