@@ -22,17 +22,55 @@ auto todoToJson(const TodoTask& todo) {
     return json;
 }
 
-std::optional<TodoTask> jsonToTodo(const crow::json::rvalue& json) {
-    if (!json.has("title") || 
-        !json.has("description") || 
-        !json.has("priority") || 
-        !json.has("completedAt") || 
-        !json.has("completed"))
-    return std::nullopt;
+//TODO: узнать как лучше возвращат ошибку (std::pair<bool,  string(err)>?)
+bool checkTodoWithNoIdInJson(const crow::json::rvalue& json) {
+    if (!(json.has("title") &&
+          json.has("description") &&
+          json.has("priority") &&
+          json.has("completedAt") &&
+          json.has("completed")))
+    return false;
 
-    std::int64_t id = json.has("id") ? 
-                        static_cast<std::int64_t>(json["id"].u()) : 
-                        -1;
+    if (json["title"].t() != crow::json::type::String) {
+        return false;
+    }
+
+    if (json["description"].t() != crow::json::type::String) {
+        return false;
+    }
+
+    if (json["priority"].t() != crow::json::type::Number) {
+        return false;
+    }
+
+    if (json["completedAt"].t() != crow::json::type::String) {
+        return false;
+    }
+
+    auto&& completedTy = json["completed"].t();
+    if (completedTy != crow::json::type::False && 
+        completedTy != crow::json::type::True) 
+    {
+        return false;
+    }
+    
+
+    return true;
+}
+
+std::optional<TodoTask> jsonToTodo(const crow::json::rvalue& json) {
+    if (!checkTodoWithNoIdInJson(json)) {
+        return std::nullopt;
+    }
+
+    std::int64_t id = -1;
+    if (json.has("id")) {
+        if (json["id"].t() != crow::json::type::Number) {
+            return std::nullopt;
+        }
+        id = static_cast<std::int64_t>(json["id"].u());
+    }
+
     return TodoTask {
         id,
         json["title"].s(),
@@ -41,6 +79,29 @@ std::optional<TodoTask> jsonToTodo(const crow::json::rvalue& json) {
         helpers::iso8601ToTimePoint(json["completedAt"].s()),
         json["completed"].b()
     };
+}
+
+std::optional<TodoTask> createTodo(
+    const crow::json::rvalue& json, 
+    service::TodoService& service) 
+{
+    if (!checkTodoWithNoIdInJson(json)) {
+        return std::nullopt;
+    }
+
+    auto&& title       = json["title"].s();
+    auto&& description = json["description"].s();
+    auto&& priority    = static_cast<unsigned>(json["priority"].u());
+    auto&& completedAt = helpers::iso8601ToTimePoint(json["completedAt"].s());
+    auto&& completed   = json["completed"].b();
+
+    return service.create(
+        title, 
+        description, 
+        priority, 
+        completedAt, 
+        completed
+    );
 }
 
 std::pair<bool, int> intFromChars(std::string_view chars) {
@@ -52,7 +113,7 @@ std::pair<bool, int> intFromChars(std::string_view chars) {
     }
 }
 
-}
+} // namespace 
 
 void registerTodoRoutes(
     crow::SimpleApp& app, 
@@ -96,6 +157,19 @@ void registerTodoRoutes(
             res.code = 416;
         }
 
+        res.end();
+    });
+
+    CROW_ROUTE(app, "/api/todos").
+        methods(crow::HTTPMethod::POST)
+    ([&todoService] (const crow::request& req, crow::response& res) {
+        auto jsonTodo = crow::json::load(req.body);
+        if (auto todo = createTodo(jsonTodo, todoService)) {
+            res = todoToJson(todo.value());
+            res.code = 200;
+        } else {
+            res.code = 400;
+        }
         res.end();
     });
 }

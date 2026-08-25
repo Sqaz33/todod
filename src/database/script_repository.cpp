@@ -78,8 +78,8 @@ ScriptRepository::ScriptRepository(std::shared_ptr<db::DataBase> db) :
 {}
 
 HandlerScript ScriptRepository::create(
-    std::string name,
-    std::string source,
+    const std::string& name,
+    const std::string& source,
     TodoEvent event,
     bool enabled)
 {

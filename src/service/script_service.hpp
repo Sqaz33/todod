@@ -22,6 +22,12 @@ public:
 public:
     void runHandlers(const TodoTask& todo, TodoEvent event);
 
+    std::optional<HandlerScript> create(
+        const std::string& name,
+        const std::string& source,
+        TodoEvent event,
+        bool enabled = true);
+
 private:
     void executeCommands_(
         const std::vector<scripting::api::ScriptCommand>& commands);

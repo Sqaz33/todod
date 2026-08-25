@@ -18,8 +18,8 @@ public:
 
 public:
     HandlerScript create(
-        std::string name,
-        std::string source,
+        const std::string& name,
+        const std::string& source,
         TodoEvent event,
         bool enabled = true);
     std::vector<HandlerScript> getAll();

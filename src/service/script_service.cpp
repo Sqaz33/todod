@@ -24,6 +24,18 @@ void ScriptService::runHandlers(
     }
 }
 
+std::optional<HandlerScript> ScriptService::create(
+    const std::string& name,
+    const std::string& source,
+    TodoEvent event,
+    bool enabled)
+{
+    if (!scripting::api::validateScript({-1, name, source, event, enabled})) {
+        return std::nullopt;
+    }
+    return scriptRepo_->create(name, source, event, enabled);
+}
+
 void ScriptService::executeCommands_(
     const std::vector<scripting::api::ScriptCommand>& commands)
 {
