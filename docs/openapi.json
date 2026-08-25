@@ -1,0 +1,464 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "todod HTTP API",
+    "version": "0.1.0",
+    "description": "Интерактивное представление целевого контракта из API.md. В текущей реализации доступны только GET и POST /api/todos и POST /api/scripts/handlers; остальные операции еще предстоит реализовать."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Тот же host, с которого открыта документация"
+    }
+  ],
+  "tags": [
+    {"name": "Todos", "description": "Чтение и изменение задач"},
+    {"name": "Scripts", "description": "События и Lua-обработчики"}
+  ],
+  "paths": {
+    "/api/page": {
+      "get": {
+        "tags": ["Todos"],
+        "summary": "Получить страницу todo",
+        "description": "Результат сортируется по id по убыванию. Пустая страница возвращается с кодом 200.",
+        "operationId": "getTodoPage",
+        "parameters": [
+          {"$ref": "#/components/parameters/Offset"},
+          {"$ref": "#/components/parameters/Limit"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Страница получена",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoPage"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidPagination"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/todos": {
+      "post": {
+        "tags": ["Todos"],
+        "summary": "Создать todo",
+        "description": "Сохраняет todo, затем запускает обработчики ADDED_TODO. Ошибка обработчика не отменяет создание и отражается в handlersOk.",
+        "operationId": "createTodo",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoCreate"}}}
+        },
+        "responses": {
+          "201": {
+            "description": "Todo создан; Location содержит путь созданного ресурса",
+            "headers": {"Location": {"schema": {"type": "string"}, "example": "/api/todos/42"}},
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoMutationResponse"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidJson"},
+          "413": {"$ref": "#/components/responses/PayloadTooLarge"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaType"},
+          "422": {"$ref": "#/components/responses/ValidationError"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/todos/{id}": {
+      "parameters": [{"$ref": "#/components/parameters/ResourceId"}],
+      "get": {
+        "tags": ["Todos"],
+        "summary": "Получить todo",
+        "operationId": "getTodo",
+        "responses": {
+          "200": {
+            "description": "Todo найден",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoTask"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidId"},
+          "404": {"$ref": "#/components/responses/TodoNotFound"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      },
+      "patch": {
+        "tags": ["Todos"],
+        "summary": "Частично изменить todo",
+        "description": "Накладывает переданные поля на существующую запись и при фактическом изменении запускает UPDATED_TODO.",
+        "operationId": "patchTodo",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoPatch"}}}
+        },
+        "responses": {
+          "200": {
+            "description": "Изменение сохранено; todo содержит итоговое состояние после обработчиков",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoMutationResponse"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidRequestOrId"},
+          "404": {"$ref": "#/components/responses/TodoNotFound"},
+          "413": {"$ref": "#/components/responses/PayloadTooLarge"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaType"},
+          "422": {"$ref": "#/components/responses/ValidationError"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      },
+      "delete": {
+        "tags": ["Todos"],
+        "summary": "Удалить todo",
+        "description": "Удаляет todo, затем запускает DELETED_TODO со снимком удаленной записи.",
+        "operationId": "deleteTodo",
+        "responses": {
+          "200": {
+            "description": "Todo удален; возвращены снимок и результаты обработчиков",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoDeleteResponse"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidId"},
+          "404": {"$ref": "#/components/responses/TodoNotFound"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/scripts/events": {
+      "get": {
+        "tags": ["Scripts"],
+        "summary": "Получить события todo",
+        "operationId": "getScriptEvents",
+        "responses": {
+          "200": {
+            "description": "Список поддерживаемых событий",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/EventsResponse"}}}
+          },
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/scripts/handlers": {
+      "get": {
+        "tags": ["Scripts"],
+        "summary": "Получить обработчики",
+        "operationId": "getHandlers",
+        "responses": {
+          "200": {
+            "description": "Все обработчики, включая выключенные",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HandlersResponse"}}}
+          },
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      },
+      "post": {
+        "tags": ["Scripts"],
+        "summary": "Создать обработчик",
+        "description": "Проверяет Lua-код в sandbox до сохранения.",
+        "operationId": "createHandler",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HandlerCreate"}}}
+        },
+        "responses": {
+          "201": {
+            "description": "Обработчик создан",
+            "headers": {"Location": {"schema": {"type": "string"}, "example": "/api/scripts/handlers/7"}},
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HandlerScript"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidJson"},
+          "413": {"$ref": "#/components/responses/PayloadTooLarge"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaType"},
+          "422": {"$ref": "#/components/responses/ScriptValidationError"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    },
+    "/api/scripts/handlers/{id}": {
+      "parameters": [{"$ref": "#/components/parameters/ResourceId"}],
+      "patch": {
+        "tags": ["Scripts"],
+        "summary": "Частично изменить обработчик",
+        "description": "Объединяет изменения с существующим обработчиком и повторно проверяет итоговый Lua-код.",
+        "operationId": "patchHandler",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HandlerPatch"}}}
+        },
+        "responses": {
+          "200": {
+            "description": "Обработчик изменен",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HandlerScript"}}}
+          },
+          "400": {"$ref": "#/components/responses/InvalidRequestOrId"},
+          "404": {"$ref": "#/components/responses/HandlerNotFound"},
+          "413": {"$ref": "#/components/responses/PayloadTooLarge"},
+          "415": {"$ref": "#/components/responses/UnsupportedMediaType"},
+          "422": {"$ref": "#/components/responses/ScriptValidationError"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      },
+      "delete": {
+        "tags": ["Scripts"],
+        "summary": "Удалить обработчик",
+        "operationId": "deleteHandler",
+        "responses": {
+          "204": {"description": "Обработчик удален; тело отсутствует"},
+          "400": {"$ref": "#/components/responses/InvalidId"},
+          "404": {"$ref": "#/components/responses/HandlerNotFound"},
+          "500": {"$ref": "#/components/responses/InternalError"}
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ResourceId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Положительный 64-битный идентификатор",
+        "schema": {"type": "integer", "format": "int64", "minimum": 1},
+        "example": 42
+      },
+      "Offset": {
+        "name": "offset",
+        "in": "query",
+        "required": true,
+        "schema": {"type": "integer", "format": "int32", "minimum": 0},
+        "example": 0
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": true,
+        "schema": {"type": "integer", "format": "int32", "minimum": 0},
+        "example": 20
+      }
+    },
+    "schemas": {
+      "TodoTask": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "description", "priority", "completedAt", "completed"],
+        "properties": {
+          "id": {"type": "integer", "format": "int64", "minimum": 1, "readOnly": true, "example": 42},
+          "title": {"type": "string", "example": "Купить молоко"},
+          "description": {"type": "string", "example": "Два литра"},
+          "priority": {"type": "integer", "format": "int64", "minimum": 0, "maximum": 4294967295, "example": 3},
+          "completedAt": {"type": "string", "format": "date-time", "description": "UTC ISO 8601, оканчивается на Z", "example": "2026-08-25T18:30:00Z"},
+          "completed": {"type": "boolean", "example": false}
+        }
+      },
+      "TodoCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "description", "priority", "completedAt", "completed"],
+        "properties": {
+          "title": {"type": "string", "example": "Купить молоко"},
+          "description": {"type": "string", "example": "Два литра"},
+          "priority": {"type": "integer", "format": "int64", "minimum": 0, "maximum": 4294967295, "example": 3},
+          "completedAt": {"type": "string", "format": "date-time", "example": "2026-08-25T18:30:00Z"},
+          "completed": {"type": "boolean", "example": false}
+        }
+      },
+      "TodoPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {"type": "string"},
+          "description": {"type": "string"},
+          "priority": {"type": "integer", "format": "int64", "minimum": 0, "maximum": 4294967295},
+          "completedAt": {"type": "string", "format": "date-time"},
+          "completed": {"type": "boolean"}
+        },
+        "example": {"priority": 5, "completed": true, "completedAt": "2026-08-25T19:15:00Z"}
+      },
+      "TodoPage": {
+        "type": "object",
+        "required": ["todos", "meta"],
+        "properties": {
+          "todos": {"type": "array", "items": {"$ref": "#/components/schemas/TodoTask"}},
+          "meta": {"$ref": "#/components/schemas/PageMeta"}
+        }
+      },
+      "PageMeta": {
+        "type": "object",
+        "required": ["total", "offset", "limit"],
+        "properties": {
+          "total": {"type": "integer", "format": "int32", "minimum": 0, "example": 37},
+          "offset": {"type": "integer", "format": "int32", "minimum": 0, "example": 0},
+          "limit": {"type": "integer", "format": "int32", "minimum": 0, "example": 20}
+        }
+      },
+      "ScriptEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": {"type": "integer", "format": "int32", "minimum": 0, "example": 0},
+          "name": {"type": "string", "enum": ["ADDED_TODO", "UPDATED_TODO", "DELETED_TODO"], "example": "ADDED_TODO"}
+        }
+      },
+      "EventsResponse": {
+        "type": "object",
+        "required": ["events"],
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/ScriptEvent"},
+            "example": [
+              {"id": 0, "name": "ADDED_TODO"},
+              {"id": 1, "name": "UPDATED_TODO"},
+              {"id": 2, "name": "DELETED_TODO"}
+            ]
+          }
+        }
+      },
+      "HandlerScript": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "source", "event", "enabled"],
+        "properties": {
+          "id": {"type": "integer", "format": "int64", "minimum": 1, "readOnly": true, "example": 7},
+          "name": {"type": "string", "example": "Повысить приоритет"},
+          "source": {"type": "string", "example": "log('started')\nset_priority(todo.id, 10)"},
+          "event": {"type": "integer", "format": "int32", "minimum": 0, "example": 0},
+          "enabled": {"type": "boolean", "example": true}
+        }
+      },
+      "HandlerCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "event", "enabled"],
+        "properties": {
+          "name": {"type": "string", "example": "Повысить приоритет"},
+          "source": {"type": "string", "example": "log('started')\nset_priority(todo.id, 10)"},
+          "event": {"type": "integer", "format": "int32", "minimum": 0, "example": 0},
+          "enabled": {"type": "boolean", "example": true}
+        }
+      },
+      "HandlerPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "name": {"type": "string"},
+          "source": {"type": "string"},
+          "event": {"type": "integer", "format": "int32", "minimum": 0},
+          "enabled": {"type": "boolean"}
+        },
+        "example": {"enabled": false}
+      },
+      "HandlersResponse": {
+        "type": "object",
+        "required": ["handlers"],
+        "properties": {
+          "handlers": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerScript"}}
+        }
+      },
+      "HandlerCommand": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "todoId", "status"],
+        "properties": {
+          "type": {"type": "string", "enum": ["complete", "set_priority"], "example": "set_priority"},
+          "todoId": {"type": "integer", "format": "int64", "example": 42},
+          "status": {"type": "string", "enum": ["applied", "not_found", "rejected", "error"], "example": "applied"}
+        }
+      },
+      "HandlerExecution": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["handlerId", "handlerName", "event", "status", "logs", "commands", "error", "durationMs"],
+        "properties": {
+          "handlerId": {"type": "integer", "format": "int64", "example": 7},
+          "handlerName": {"type": "string", "example": "Повысить приоритет"},
+          "event": {"type": "integer", "format": "int32", "example": 0},
+          "status": {"type": "string", "enum": ["success", "script_error", "limit_exceeded", "command_error"], "example": "success"},
+          "logs": {"type": "array", "items": {"type": "string"}, "example": ["started"]},
+          "commands": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerCommand"}},
+          "error": {"type": "string", "nullable": true, "example": null},
+          "durationMs": {"type": "integer", "format": "int64", "minimum": 0, "example": 1}
+        }
+      },
+      "TodoMutationResponse": {
+        "type": "object",
+        "required": ["todo", "handlersOk", "handlerExecutions"],
+        "properties": {
+          "todo": {"$ref": "#/components/schemas/TodoTask"},
+          "handlersOk": {"type": "boolean", "example": true},
+          "handlerExecutions": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerExecution"}}
+        }
+      },
+      "TodoDeleteResponse": {
+        "type": "object",
+        "required": ["deletedTodo", "handlersOk", "handlerExecutions"],
+        "properties": {
+          "deletedTodo": {"$ref": "#/components/schemas/TodoTask"},
+          "handlersOk": {"type": "boolean", "example": true},
+          "handlerExecutions": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerExecution"}}
+        }
+      },
+      "ErrorDetail": {
+        "type": "object",
+        "required": ["field", "message"],
+        "properties": {
+          "field": {"type": "string", "example": "priority"},
+          "message": {"type": "string", "example": "must be an integer from 0 to 4294967295"}
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "required": ["code", "message", "details"],
+        "properties": {
+          "code": {"type": "string", "example": "VALIDATION_ERROR"},
+          "message": {"type": "string", "example": "Request validation failed"},
+          "details": {"type": "array", "items": {"$ref": "#/components/schemas/ErrorDetail"}}
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {"error": {"$ref": "#/components/schemas/ErrorBody"}}
+      }
+    },
+    "responses": {
+      "InvalidPagination": {
+        "description": "Параметры пагинации отсутствуют или недопустимы",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "INVALID_PAGINATION", "message": "offset and limit must be integers from 0 to 2147483647", "details": [{"field": "offset", "message": "must not be negative"}]}}}}
+      },
+      "InvalidJson": {
+        "description": "Тело не является корректным JSON",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "INVALID_JSON", "message": "Request body is not valid JSON", "details": []}}}}
+      },
+      "InvalidId": {
+        "description": "Некорректный id",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "INVALID_ID", "message": "id must be a positive 64-bit integer", "details": [{"field": "id", "message": "invalid id"}]}}}}
+      },
+      "InvalidRequestOrId": {
+        "description": "Некорректный id или синтаксически неправильный JSON",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+      },
+      "TodoNotFound": {
+        "description": "Todo не существует",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "TODO_NOT_FOUND", "message": "Todo 42 was not found", "details": []}}}}
+      },
+      "HandlerNotFound": {
+        "description": "Обработчик не существует",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "HANDLER_NOT_FOUND", "message": "Handler 7 was not found", "details": []}}}}
+      },
+      "ValidationError": {
+        "description": "JSON корректен синтаксически, но поля не прошли проверку",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "VALIDATION_ERROR", "message": "Request validation failed", "details": [{"field": "priority", "message": "must be an integer from 0 to 4294967295"}]}}}}
+      },
+      "ScriptValidationError": {
+        "description": "Поля обработчика или Lua-код не прошли проверку",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "SCRIPT_VALIDATION_FAILED", "message": "Lua script validation failed", "details": [{"field": "source", "message": "execution limit exceeded"}]}}}}
+      },
+      "PayloadTooLarge": {
+        "description": "Тело запроса превышает настроенный предел",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "PAYLOAD_TOO_LARGE", "message": "Request body is too large", "details": []}}}}
+      },
+      "UnsupportedMediaType": {
+        "description": "Требуется Content-Type application/json",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "UNSUPPORTED_MEDIA_TYPE", "message": "Content-Type must be application/json", "details": []}}}}
+      },
+      "InternalError": {
+        "description": "Внутренняя ошибка приложения",
+        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}, "example": {"error": {"code": "INTERNAL_ERROR", "message": "Internal server error", "details": []}}}}
+      }
+    }
+  }
+}

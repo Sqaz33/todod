@@ -1,4 +1,0 @@
-GET /page?offset=<x>&limit=<y>
-POST /todos   json: {TodoTask}
-GET /todos/<id>
-PATCH /todos/<id>

@@ -30,3 +30,18 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${LUA_LIBRARIES}
 )
+
+set(TODOD_DOCS_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/docs")
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    TODOD_DOCS_DIR="${TODOD_DOCS_OUTPUT_DIR}"
+)
+
+add_custom_target(todod_docs ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/docs"
+        "${TODOD_DOCS_OUTPUT_DIR}"
+    COMMENT "Copying API documentation"
+)
+
+add_dependencies(${PROJECT_NAME} todod_docs)

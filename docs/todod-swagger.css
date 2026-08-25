@@ -1,0 +1,41 @@
+html {
+  box-sizing: border-box;
+  overflow-y: scroll;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  background: #f7f8fa;
+}
+
+.swagger-ui .topbar {
+  display: none;
+}
+
+.swagger-ui .info {
+  margin: 36px 0 28px;
+}
+
+.swagger-ui .info .title {
+  color: #172033;
+}
+
+.swagger-ui .scheme-container {
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 10%);
+}
+
+.swagger-ui .opblock-tag {
+  border-bottom-color: #dfe3eb;
+}
+
+.swagger-ui .opblock {
+  border-radius: 8px;
+  overflow: hidden;
+}

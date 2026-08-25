@@ -11,7 +11,7 @@ TododApp::TododApp() {
     auto scirptEngine = std::make_shared<scripting::ScriptEngine>();
     auto scriptService = std::make_shared<service::ScriptService>(scirptEngine, scriptRepo, todoRepo);
     auto todoService = std::make_shared<service::TodoService>(todoRepo, scriptService);
-    auto server = std::make_shared<http::HttpServer>(todoService, scriptService, 6666, 2);
+    auto server = std::make_shared<http::HttpServer>(todoService, scriptService, 8000, 2);
     server->run();
 }
 
