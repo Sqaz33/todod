@@ -47,6 +47,10 @@ bool checkTodoWithNoIdInJson(const crow::json::rvalue& json) {
         return false;
     }
 
+    if (json["priority"].u() > std::numeric_limits<unsigned>::max()) {
+        return false;
+    }
+
     if (json["completedAt"].t() != crow::json::type::String) {
         return false;
     }

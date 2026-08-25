@@ -20,7 +20,7 @@ HttpServer::HttpServer(
 }
 
 void HttpServer::run() {
-    crowApp_.port(port_).concurrency(threads_).run();
+    crowApp_.bindaddr("127.0.0.1").port(port_).concurrency(threads_).run();
 }
 
 } // namespace todod::http

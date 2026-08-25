@@ -41,9 +41,11 @@ bool checkHandlerScriptWithNoIdInJson(const crow::json::rvalue& json) {
     }
 
     TodoEvent event;
+    std::int64_t i;
+    std::uint64_t u;
     switch (json["event"].nt()) {
         case crow::json::num_type::Signed_integer:
-            auto i = json["event"].i();
+            i = json["event"].i();
             if (i < std::numeric_limits<int>::min() || 
                 i > std::numeric_limits<int>::max()) 
             {
@@ -52,7 +54,7 @@ bool checkHandlerScriptWithNoIdInJson(const crow::json::rvalue& json) {
             event = static_cast<TodoEvent>(i);
             break;
         case crow::json::num_type::Unsigned_integer:
-            auto u = json["event"].u();
+            u = json["event"].u();
             if (u > std::numeric_limits<int>::max()) {
                 return false;
             }
