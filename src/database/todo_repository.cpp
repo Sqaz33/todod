@@ -172,7 +172,7 @@ std::optional<TodoTask> TodoRepository::findByID(std::int64_t id) {
 
 std::optional<TodoPage> 
 TodoRepository::getPage(std::int32_t offset, std::int32_t limit) {
-    if (limit == 0) {
+    if (limit < 0 || offset < 0) {
         return std::nullopt;
     }
 
