@@ -13,12 +13,12 @@ namespace {
 
 auto todoToJson(const TodoTask& todo) {
     crow::json::wvalue json;
-    json["id"] = todo.id;
-    json["title"] = todo.title;
+    json["id"]          = todo.id;
+    json["title"]       = todo.title;
     json["description"] = todo.description;
-    json["priority"] = todo.priority;
+    json["priority"]    = todo.priority;
     json["completedAt"] = helpers::timePointToIso8601(todo.completedAt);
-    json["completed"] = todo.completed;
+    json["completed"]   = todo.completed;
     return json;
 }
 
@@ -161,10 +161,10 @@ void registerTodoRoutes(
                 todos.push_back(todoToJson(todo));
             }
 
-            jsonPage["todos"] = std::move(todos);
-            jsonPage["meta"]["total"] = page.value().meta.total;
+            jsonPage["todos"]          = std::move(todos);
+            jsonPage["meta"]["total"]  = page.value().meta.total;
             jsonPage["meta"]["offset"] = page.value().meta.offset;
-            jsonPage["meta"]["limit"] = page.value().meta.limit;
+            jsonPage["meta"]["limit"]  = page.value().meta.limit;
             res.code = 200;
             res = std::move(jsonPage);
         } else {

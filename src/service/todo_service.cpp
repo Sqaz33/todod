@@ -9,7 +9,6 @@ TodoService::TodoService(
     , scripting_(scripting)
 {}
 
-
 TodoTask TodoService::create(
     std::string title,
     std::string description,

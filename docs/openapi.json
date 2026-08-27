@@ -40,7 +40,7 @@
       "post": {
         "tags": ["Todos"],
         "summary": "Создать todo",
-        "description": "Сохраняет todo, затем запускает обработчики ADDED_TODO. Ошибка обработчика не отменяет создание и отражается в handlersOk.",
+        "description": "Сначала сохраняет todo, затем последовательно по handlerId запускает включенные обработчики ADDED_TODO. Все обработчики получают одинаковый снимок созданного todo. Каждый обработчик имеет отдельную транзакцию команд: если Lua завершился ошибкой, превысил лимит или хотя бы одна команда не выполнилась, ни одна команда этого обработчика не применяется. Команды, выполненные до ошибки, откатываются; следующие обработчики все равно запускаются. Успешные команды предыдущих обработчиков сохраняются. Ошибка обработчика не удаляет созданный todo и не превращает ответ в 500.",
         "operationId": "createTodo",
         "requestBody": {
           "required": true,
@@ -48,9 +48,155 @@
         },
         "responses": {
           "201": {
-            "description": "Todo создан; Location содержит путь созданного ресурса",
+            "description": "Todo создан. Возвращается как при полном успехе обработчиков, так и при частичных сбоях. Код 207 не используется: основной ресурс создан полностью, а отдельные результаты обработчиков находятся в handlers. Location содержит путь созданного ресурса.",
             "headers": {"Location": {"schema": {"type": "string"}, "example": "/api/todos/42"}},
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TodoMutationResponse"}}}
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/TodoCreateResponse"},
+                "examples": {
+                  "allHandlersSucceeded": {
+                    "summary": "Todo создан, все обработчики выполнены",
+                    "value": {
+                      "status": "created",
+                      "todo": {
+                        "id": 42,
+                        "title": "Купить молоко",
+                        "description": "Два литра",
+                        "priority": 10,
+                        "completedAt": "2026-08-25T18:30:00Z",
+                        "completed": false
+                      },
+                      "handlers": {
+                        "allSucceeded": true,
+                        "total": 1,
+                        "succeeded": 1,
+                        "failed": 0,
+                        "failedHandlerIds": [],
+                        "executions": [
+                          {
+                            "handlerId": 7,
+                            "handlerName": "Повысить приоритет",
+                            "event": 0,
+                            "status": "success",
+                            "logs": ["priority changed"],
+                            "commands": [
+                              {
+                                "index": 0,
+                                "type": "set_priority",
+                                "todoId": 42,
+                                "arguments": {"priority": 10},
+                                "status": "applied",
+                                "error": null
+                              }
+                            ],
+                            "error": null,
+                            "durationMs": 1
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "createdWithHandlerErrors": {
+                    "summary": "Todo создан, но два обработчика завершились ошибкой",
+                    "description": "Обработчик 8 полностью откатан из-за второй команды; обработчик 9 упал при выполнении Lua. Изменения успешного обработчика 7 сохранены.",
+                    "value": {
+                      "status": "created_with_handler_errors",
+                      "todo": {
+                        "id": 42,
+                        "title": "Купить молоко",
+                        "description": "Два литра",
+                        "priority": 10,
+                        "completedAt": "2026-08-25T18:30:00Z",
+                        "completed": false
+                      },
+                      "handlers": {
+                        "allSucceeded": false,
+                        "total": 3,
+                        "succeeded": 1,
+                        "failed": 2,
+                        "failedHandlerIds": [8, 9],
+                        "executions": [
+                          {
+                            "handlerId": 7,
+                            "handlerName": "Повысить приоритет",
+                            "event": 0,
+                            "status": "success",
+                            "logs": ["priority changed"],
+                            "commands": [
+                              {
+                                "index": 0,
+                                "type": "set_priority",
+                                "todoId": 42,
+                                "arguments": {"priority": 10},
+                                "status": "applied",
+                                "error": null
+                              }
+                            ],
+                            "error": null,
+                            "durationMs": 1
+                          },
+                          {
+                            "handlerId": 8,
+                            "handlerName": "Завершить и изменить приоритет",
+                            "event": 0,
+                            "status": "command_error",
+                            "logs": ["commands prepared"],
+                            "commands": [
+                              {
+                                "index": 0,
+                                "type": "complete",
+                                "todoId": 42,
+                                "arguments": {},
+                                "status": "rolled_back",
+                                "error": null
+                              },
+                              {
+                                "index": 1,
+                                "type": "set_priority",
+                                "todoId": 42,
+                                "arguments": {"priority": -1},
+                                "status": "failed",
+                                "error": {
+                                  "code": "INVALID_PRIORITY",
+                                  "message": "priority must be greater than or equal to 0"
+                                }
+                              },
+                              {
+                                "index": 2,
+                                "type": "complete",
+                                "todoId": 100500,
+                                "arguments": {},
+                                "status": "not_executed",
+                                "error": null
+                              }
+                            ],
+                            "error": {
+                              "code": "COMMAND_TRANSACTION_ROLLED_BACK",
+                              "message": "handler commands were rolled back because command 1 failed",
+                              "failedCommandIndex": 1
+                            },
+                            "durationMs": 2
+                          },
+                          {
+                            "handlerId": 9,
+                            "handlerName": "Ошибочный Lua",
+                            "event": 0,
+                            "status": "script_error",
+                            "logs": ["before error"],
+                            "commands": [],
+                            "error": {
+                              "code": "LUA_RUNTIME_ERROR",
+                              "message": "attempt to call a nil value"
+                            },
+                            "durationMs": 0
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
           },
           "400": {"$ref": "#/components/responses/InvalidJson"},
           "413": {"$ref": "#/components/responses/PayloadTooLarge"},
@@ -351,16 +497,46 @@
       "HandlerCommand": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["type", "todoId", "status"],
+        "description": "Результат одной команды. Если обработчик завершился с command_error, applied не остается ни у одной его команды: уже выполненные имеют rolled_back, ошибочная — failed, еще не выполнявшиеся — not_executed.",
+        "required": ["index", "type", "todoId", "arguments", "status", "error"],
         "properties": {
+          "index": {"type": "integer", "format": "int32", "minimum": 0, "description": "Позиция команды в очереди обработчика", "example": 0},
           "type": {"type": "string", "enum": ["complete", "set_priority"], "example": "set_priority"},
           "todoId": {"type": "integer", "format": "int64", "example": 42},
-          "status": {"type": "string", "enum": ["applied", "not_found", "rejected", "error"], "example": "applied"}
+          "arguments": {"type": "object", "additionalProperties": true, "description": "Аргументы команды, кроме todoId", "example": {"priority": 10}},
+          "status": {"type": "string", "enum": ["applied", "failed", "rolled_back", "not_executed"], "example": "applied"},
+          "error": {
+            "nullable": true,
+            "allOf": [{"$ref": "#/components/schemas/HandlerError"}]
+          }
+        }
+      },
+      "HandlerError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Стабильный машинный код ошибки",
+            "enum": [
+              "LUA_RUNTIME_ERROR",
+              "EXECUTION_LIMIT_EXCEEDED",
+              "INVALID_PRIORITY",
+              "TODO_NOT_FOUND",
+              "DATABASE_ERROR",
+              "COMMAND_TRANSACTION_ROLLED_BACK"
+            ],
+            "example": "INVALID_PRIORITY"
+          },
+          "message": {"type": "string", "description": "Безопасное диагностическое сообщение без SQL и внутренних секретов", "example": "priority must be greater than or equal to 0"},
+          "failedCommandIndex": {"type": "integer", "format": "int32", "minimum": 0, "nullable": true, "description": "Индекс ошибочной команды; присутствует для command_error", "example": 1}
         }
       },
       "HandlerExecution": {
         "type": "object",
         "additionalProperties": false,
+        "description": "Результат одного включенного обработчика. Lua сначала формирует очередь команд, после чего вся очередь применяется одной транзакцией. Сообщения log() являются диагностикой и сохраняются в ответе даже при ошибке Lua или откате команд.",
         "required": ["handlerId", "handlerName", "event", "status", "logs", "commands", "error", "durationMs"],
         "properties": {
           "handlerId": {"type": "integer", "format": "int64", "example": 7},
@@ -369,26 +545,56 @@
           "status": {"type": "string", "enum": ["success", "script_error", "limit_exceeded", "command_error"], "example": "success"},
           "logs": {"type": "array", "items": {"type": "string"}, "example": ["started"]},
           "commands": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerCommand"}},
-          "error": {"type": "string", "nullable": true, "example": null},
+          "error": {
+            "nullable": true,
+            "allOf": [{"$ref": "#/components/schemas/HandlerError"}]
+          },
           "durationMs": {"type": "integer", "format": "int64", "minimum": 0, "example": 1}
+        }
+      },
+      "HandlerReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Сводка запусков. total учитывает только включенные обработчики подходящего события; succeeded + failed всегда равно total. failedHandlerIds содержит ID всех executions со статусом, отличным от success. Ошибка одного обработчика не останавливает следующие.",
+        "required": ["allSucceeded", "total", "succeeded", "failed", "failedHandlerIds", "executions"],
+        "properties": {
+          "allSucceeded": {"type": "boolean", "description": "true, если обработчиков не было либо каждый завершился успешно", "example": false},
+          "total": {"type": "integer", "format": "int32", "minimum": 0, "example": 3},
+          "succeeded": {"type": "integer", "format": "int32", "minimum": 0, "example": 1},
+          "failed": {"type": "integer", "format": "int32", "minimum": 0, "example": 2},
+          "failedHandlerIds": {"type": "array", "items": {"type": "integer", "format": "int64", "minimum": 1}, "example": [8, 9]},
+          "executions": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerExecution"}}
+        }
+      },
+      "TodoCreateResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Todo содержит итоговое состояние после всех успешно примененных обработчиков. Сбои перечислены в handlers и не отменяют создание.",
+        "required": ["status", "todo", "handlers"],
+        "properties": {
+          "status": {"type": "string", "enum": ["created", "created_with_handler_errors"], "description": "created означает, что обработчиков не было либо все прошли успешно; created_with_handler_errors означает, что todo создан, но хотя бы один обработчик упал.", "example": "created_with_handler_errors"},
+          "todo": {"$ref": "#/components/schemas/TodoTask"},
+          "handlers": {"$ref": "#/components/schemas/HandlerReport"}
         }
       },
       "TodoMutationResponse": {
         "type": "object",
-        "required": ["todo", "handlersOk", "handlerExecutions"],
+        "additionalProperties": false,
+        "required": ["status", "todo", "handlers"],
         "properties": {
+          "status": {"type": "string", "enum": ["updated", "updated_with_handler_errors"], "example": "updated"},
           "todo": {"$ref": "#/components/schemas/TodoTask"},
-          "handlersOk": {"type": "boolean", "example": true},
-          "handlerExecutions": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerExecution"}}
+          "handlers": {"$ref": "#/components/schemas/HandlerReport"}
         }
       },
       "TodoDeleteResponse": {
         "type": "object",
-        "required": ["deletedTodo", "handlersOk", "handlerExecutions"],
+        "additionalProperties": false,
+        "required": ["status", "deletedTodo", "handlers"],
         "properties": {
+          "status": {"type": "string", "enum": ["deleted", "deleted_with_handler_errors"], "example": "deleted"},
           "deletedTodo": {"$ref": "#/components/schemas/TodoTask"},
-          "handlersOk": {"type": "boolean", "example": true},
-          "handlerExecutions": {"type": "array", "items": {"$ref": "#/components/schemas/HandlerExecution"}}
+          "handlers": {"$ref": "#/components/schemas/HandlerReport"}
         }
       },
       "ErrorDetail": {

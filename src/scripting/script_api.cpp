@@ -51,18 +51,18 @@ bool validateScript(const HandlerScript& script) {
 
     sol::environment env(lua, sol::create);
 
-    auto&& todo = lua.create_table();
-    todo["id"] = std::int64_t{1};
-    todo["title"] = "test";
+    auto&& todo         = lua.create_table();
+    todo["id"]          = std::int64_t{1};
+    todo["title"]       = "test";
     todo["description"] = "test";
-    todo["priority"] = 1u;
-    todo["completed"] = false;
+    todo["priority"]    = 1u;
+    todo["completed"]   = false;
 
     env["todo"] = todo;
 
-    env["complete"] = [](std::int64_t id) { };
+    env["complete"]     = [](std::int64_t id) { };
     env["set_priority"] = [](std::int64_t id, int priority) { };
-    env["log"] = [](const std::string& msg) { };
+    env["log"]          = [](const std::string& msg) { };
 
     
     limits::ScriptExecutionLimit limit(      

@@ -13,10 +13,10 @@ namespace {
 
 auto handlerScriptToJson(const HandlerScript& script) {
     crow::json::wvalue json;
-    json["id"] = script.id;
-    json["name"] = script.name;
-    json["source"] = script.source;
-    json["event"] = static_cast<int>(script.event);
+    json["id"]      = script.id;
+    json["name"]    = script.name;
+    json["source"]  = script.source;
+    json["event"]   = static_cast<int>(script.event);
     json["enabled"] = script.enabled;
     return json;
 }
