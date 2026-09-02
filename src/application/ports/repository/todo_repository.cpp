@@ -96,29 +96,19 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
     ))
 {}
 
-TodoTask TodoRepository::create(
-    std::string title,
-    std::string description,
-    unsigned priority,
-    std::chrono::system_clock::time_point completedAt,
-    bool completed)
-{
-    std::lock_guard<std::mutex> lk(db_->mutex());
+TodoCreationResult TodoRepository::createWithNoLock(const domain::TodoDefinition& def) {
+    auto err = insert_(
+        def.title(),
+        def.description(),
+        def.priority(),
+        helpers::toTimestamp(def.completedAt()),
+        def.completed());   
 
-    insert_(
-        title,
-        description,
-        priority,
-        helpers::toTimestamp(completedAt),
-        completed);
+    if (err) {
+        return std::unexpected(err.value());
+    }
 
-    return TodoTask{
-        db_->connection().getLastInsertRowid(),
-        std::move(title),
-        std::move(description),
-        priority,
-        completedAt,
-        completed};
+    return domain::TodoTask{{db_->connection().getLastInsertRowid()}, def};
 }
 
 std::vector<TodoTask> TodoRepository::getAll() {
