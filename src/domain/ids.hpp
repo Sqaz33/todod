@@ -8,7 +8,7 @@ struct TodoId {
     std::int64_t id;
 };
 
-struct ScriptId {
+struct HandlerScriptId {
     std::int64_t id;    
 };
 

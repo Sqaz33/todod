@@ -19,7 +19,6 @@ struct CreateTodoOutput {
 
 using TodoCreationResult = std::expected<CreateTodoOutput, TodoCreationError>;
 
-
 TodoCreationResult createTodo(const domain::TodoInput& input);
 
 } // namespace todod::use_cases::create_todo

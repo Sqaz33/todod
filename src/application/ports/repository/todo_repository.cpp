@@ -3,6 +3,7 @@
 #include <format>
 
 #include "time/timestamp_helpers.hpp"
+#include "infrastructure/database/sqlite_statement_guard.hpp"
 
 namespace {
     const std::string ID_COLUMN = "id";
@@ -14,13 +15,14 @@ namespace {
     const std::string TABLE_NAME = "todos";
 
     todod::TodoTask readTask(SQLite::Statement& query) {
-        return todod::TodoTask {
-            query.getColumn(0).getInt64(),
+        return  {
+            .id = { query.getColumn(0).getInt64()},
+            .def = domain::TodoDefinition::rehydrate(
             query.getColumn(1).getString(),
             query.getColumn(2).getString(),
             query.getColumn(3).getUInt(),
             todod::helpers::fromTimestamp(query.getColumn(4).getInt64()),
-            query.getColumn(5).getInt() != 0
+            query.getColumn(5).getInt() != 0)
         };
     }
 }
@@ -97,7 +99,7 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
 {}
 
 TaskOrError TodoRepository::create(const domain::TodoDefinition& def) {
-    return db_->access([&this](db::DBAccess& access) { return create(def, access); })
+    return db_->access([&](db::DBAccess& access) { return create(def, access); })
 }
 
 TaskOrError TodoRepository::create(const domain::TodoDefinition& def, db::DBAccess&) {
@@ -147,45 +149,52 @@ TaskOrError TodoRepository::create(const domain::TodoDefinition& def, db::DBAcce
 //     return updated;
 // }
 
-// std::optional<TodoTask> TodoRepository::findByID(std::int64_t id) {
-//     std::lock_guard<std::mutex> lk(db_->mutex());
+TaskOrError findByID(domain::TodoId id) {
+    return db_->access([&](db::DBAccess& access) { return findByID(id, access); });
+}
 
-//     findByIdQuery_.bind(1, id);
-//     if (!findByIdQuery_.executeStep()) {
-//         findByIdQuery_.reset();
-//         findByIdQuery_.clearBindings();
-//         return std::nullopt;
-//     }
-//     TodoTask task = readTask(findByIdQuery_);
+TaskOrError TodoRepository::findByID(domain::TodoId id,  db::DBAccess&) {
+    db::guard::StatementResetGuard guard { findByIdQuery_ };
+    
+    try {
+        findByIdQuery_.bind(1, id.id);
+        if (!findByIdQuery_.executeStep()) {
+            findByIdQuery_.reset();
+            findByIdQuery_.clearBindings();
+            return std::nullopt;
+        }
+        TodoTask task = readTask(findByIdQuery_);
 
-//     findByIdQuery_.reset();
-//     findByIdQuery_.clearBindings();
+        return task;
+    } catch (const SQLite::Exception& e) {
+        return std::unexpect(db::error::StorageError::create("find todo by id", e));
+    }
+}
 
-//     return task;
-// }
-
-GetPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit) {
+GetTodoPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit) {
     return db_->access([&](db::DBAccess& access) { return getPage(offset, limit, access); });
 }
 
-GetPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit, db::DBAccess&) {
+GetTodoPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit, db::DBAccess& access) {
     db::guard::StatementResetGuard guard { getPageQeury_ };
 
     try {
         getPageQeury_.bind(1, static_cast<std::int64_t>(limit));
         getPageQeury_.bind(2, static_cast<std::int64_t>(offset));
-        TodoPage page = {{}, {getCount(), offset, limit}};
+        auto count = getCount(access);
+        if (count) {
+            domain::TodoPage page = {{}, {*count, offset, limit}};
+        } else {
+            return std::unexpect(count.error());
+        }
 
         while (getPageQeury_.executeStep()) {
             page.todos.push_back(readTask(getPageQeury_));
         }
 
-        getPageQeury_.reset();
-        getPageQeury_.clearBindings();
-
         return page;
     } catch (const SQLite::Exception& e) {
-        return std::unexpect(db::error::StorageError::create("get page", e));
+        return std::unexpect(db::error::StorageError::create("get todo page", e));
     }
 }
 
@@ -204,51 +213,45 @@ GetPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit, d
 //     return removed;
 // }
 
-UpdateTodoResult TodoRepository::setCompleteStatus(std::int64_t id, bool status) {
+UpdateTodoResult TodoRepository::setCompleteStatus(domain::TodoId id, bool status) {
     return db_->access([&](db::DBAccess& access) { return setCompleteStatus(id, status, access); });
 }
 
-UpdateTodoResult TodoRepository::setCompleteStatus(std::int64_t id, bool status, db::DBAccess&) {
+UpdateTodoResult TodoRepository::setCompleteStatus(domain::TodoId id, bool status, db::DBAccess&) {
     db::guard::StatementResetGuard guard { setCompleteQuery_ };
 
     try {
         setCompleteQuery_.bind(1, status);
-        setCompleteQuery_.bind(2, id);
+        setCompleteQuery_.bind(2, id.id);
 
         setCompleteQuery_.exec();
         
         bool updated = db_->connection().getChanges() != 0;
 
-        setCompleteQuery_.reset();
-        setCompleteQuery_.clearBindings();
-
        return updated;
     } catch (const SQLite::Exception& e) {
-        return std::unexpect(db::error::StorageError::create("set complete status", e));
+        return std::unexpect(db::error::StorageError::create("set todo complete status", e));
     }
 }
 
-UpdateTodoResult TodoRepository::setPriority(std::int64_t id, int priority) {
+UpdateTodoResult TodoRepository::setPriority(domain::TodoId id, int priority) {
     return db_->access([&](db::DBAccess& access) { return setPriority(id, priority, access); });
 }
 
-UpdateTodoResult TodoRepository::setPriority(std::int64_t id, int priority, db::DBAccess&) {
+UpdateTodoResult TodoRepository::setPriority(domain::TodoId id, int priority, db::DBAccess&) {
     db::guard::StatementResetGuard guard { setPriorityQuery_ };
 
     try {
         setPriorityQuery_.bind(1, priority);
-        setPriorityQuery_.bind(2, id);
+        setPriorityQuery_.bind(2, id.id);
 
         setPriorityQuery_.exec();
         
         bool updated = db_->connection().getChanges() != 0;
 
-        setPriorityQuery_.reset();
-        setPriorityQuery_.clearBindings();
-
         return updated;
     } catch (const SQLite::Exception& e) {
-        return std::unexpect(db::error::StorageError::create("set priority", e));
+        return std::unexpect(db::error::StorageError::create("set todo priority", e));
     }
 }
 
@@ -262,11 +265,9 @@ GetCountResult TodoRepository::getCount(db::DBAccess&) {
     try {
         getCountQuery_.executeStep();
         std::int32_t count = getCountQuery_.getColumn(0).getInt();
-        getCountQuery_.reset();
-        getCountQuery_.clearBindings();
         return count;
     } catch (const SQLite::Exception& e) {
-        return std::unexpect(db::error::StorageError::create("get count", e));
+        return std::unexpect(db::error::StorageError::create("get todo count", e));
     }
 }
 

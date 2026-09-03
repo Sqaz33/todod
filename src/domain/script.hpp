@@ -1,19 +1,65 @@
 #pragma once
 
-
 #include <cstdint>
 #include <string>
 
 #include "event.hpp"
 
-namespace todod {
+namespace todod::domain {
 
-struct HandlerScript {
-    std::int64_t id;
+struct HandlerScriptInput {
     std::string name;
     std::string source;
-    TodoEvent event;
-    bool enabled = true;
+    std::int64_t event;
+    bool enabled;
 };
 
-} // namespace todod
+enum class HandlerScriptValidationError {
+    EmptyName,
+    NameTooLong,
+    SourceTooLong,
+    NegativeEvent,
+    UnkownEvent,
+};
+
+class HandlerScriptDefinition;
+
+using HandlerScriptResult = std::expected<HandlerScriptDefinition, HandlerScript>;
+
+class HandlerScriptDefinition {
+public:
+    static HandlerScriptDefinition create(const HandlerScriptInput& input);
+    static HandlerScriptDefinition rehydrate(
+        const std::string& name,
+        const std::string& source,
+        TodoEvent event,
+        bool enabled,
+    );
+
+public:
+    const std::string& name() const noexcept;
+    const std::string& source() const noexcept;
+    TodoEvent event() const noexcept;
+    bool enabled() const noexcept;
+
+private:
+    HandlerScriptDefinition(
+        const std::string& name,
+        const std::string& source,
+        TodoEvent event,
+        bool enabled,
+    );
+
+private:
+    std::string name_;
+    std::string source_;
+    TodoEvent event_;
+    bool enabled_;
+};
+
+struct HandlerScript {
+    HandlerScriptId id;
+    HandlerScriptDefinition def;
+};
+
+} // namespace todod::domain

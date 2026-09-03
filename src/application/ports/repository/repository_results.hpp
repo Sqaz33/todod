@@ -7,12 +7,12 @@
 #include <cstdint>
 
 #include "domain/todo.hpp"
-#include "infrastructure/database/database.hpp"
-#include "infrastructure/database/sqlite_statement_guard.hpp"
+#include "domain/script.hpp"
 #include "storage_error.hpp"
 
-
 namespace todod::repository {
+
+using MaybeError = std::optional<db::error::StorageError>; 
 
 using TaskOrError = std::expected<
     domain::TodoTask, 
@@ -24,9 +24,7 @@ using GetAllResult = std::expected<
     db::error::StorageError
 >;
 
-using MaybeError = std::optional<db::error::StorageError>; 
-
-using GetPageResult = std::expected<
+using GetTodoPageResult = std::expected<
     domain::TodoPage,
     db::error::StorageError
 >;
@@ -39,6 +37,16 @@ using GetCountResult = std::expected<
 using UpdateTodoResult = std::expected<
     bool, 
     db::error::StorageError    
+>;
+
+using HandlerScriptOrError = std::expected<
+    domain::HandlerScript,
+    db::error::StorageError
+>;
+
+using FindHandlerScriptByEventResult = std::expected<
+    std::vector<domain::HandlerScript>,
+    db::error::StorageError
 >;
 
 } // namespace todod::repository

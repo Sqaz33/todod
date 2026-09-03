@@ -7,7 +7,6 @@
 namespace todod::domain {
 
 template <class Item>
-
 struct Page {
     std::vector<Iteim> items;
     struct {

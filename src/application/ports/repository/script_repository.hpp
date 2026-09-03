@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "database.hpp"
-#include "domain/script.hpp"
+#include "infrastructure/database/database.hpp"
+#include "repository_results.hpp"
 
 namespace todod::repository {
 
@@ -17,25 +17,26 @@ public:
     explicit ScriptRepository(std::shared_ptr<db::DataBase> db);
 
 public:
-    HandlerScript create(
-        const std::string& name,
-        const std::string& source,
-        TodoEvent event,
-        bool enabled = true);
-    std::vector<HandlerScript> getAll();
-    bool updateTodo(const HandlerScript& script);
-    std::optional<HandlerScript> findByID(std::int64_t id);
-    bool removeTodo(std::int64_t id);
-    std::vector<HandlerScript> findByEvent(TodoEvent event);
+    HandlerScriptOrError create(const domain::HandlerScriptDefinition& def);
+    HandlerScriptOrError create(const domain::HandlerScriptDefinition& def, db::DBAccess&);
+    // std::vector<HandlerScript> getAll();
+    // bool updateScript(const HandlerScript& script);
+    // std::optional<HandlerScript> findByID(std::int64_t id);
+    // bool removeScript(std::int64_t id);
+    FindHandlerScriptByEventResult findByEvent(domain::TodoEvent event);
+    FindHandlerScriptByEventResult findByEvent(domain::TodoEvent event, db::DBAccess&);
 
 private:
     template <class... Ty>
-    void insert_(Ty&&... args) {
-        int idx = 1;
-        (insertionQuery_.bind(idx++, std::forward<Ty>(args)), ...);
-        insertionQuery_.exec();
-        insertionQuery_.reset();
-        insertionQuery_.clearBindings();
+    MaybeError insert_(Ty&&... args) {
+        db::guard::StatementResetGuard guard{ insertionQuery_ };
+        try {
+            int idx = 1;
+            (insertionQuery_.bind(idx++, std::forward<Ty>(args)), ...);
+            insertionQuery_.exec();
+        } catch (const SQLite::Exception& e) {
+            return db::error::StorageError::create("insert handler", e);
+        }
     }
 
 private:

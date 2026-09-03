@@ -72,4 +72,4 @@ struct TodoTask {
 
 using TodoPage = Page<TodoDefinition>;
 
-} // namespace todod 
+} // namespace todod::domain

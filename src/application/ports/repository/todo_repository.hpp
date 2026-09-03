@@ -5,7 +5,7 @@
 #include <chrono>
 
 #include "repository_results.hpp"
-#include "database.hpp"
+#include "infrastructure/database/database.hpp"
 
 namespace todod::repository {
 
@@ -19,24 +19,27 @@ public:
 
     // GetAllResult getAll();
     // MaybeError updateTodo(const domain::TodoTask& task);
-    // TaskOrError findByID(std::int64_t id);
-    GetPageResult getPage(std::int32_t offset, std::int32_t limit);
-    GetPageResult getPage(std::int32_t offset, std::int32_t limit,  db::DBAccess&);
+
+    TaskOrError findByID(domain::TodoId id);
+    TaskOrError findByID(domain::TodoId id,  db::DBAccess&);
+
+    GetTodoPageResult getPage(std::int32_t offset, std::int32_t limit);
+    GetTodoPageResult getPage(std::int32_t offset, std::int32_t limit,  db::DBAccess&);
 
     // MaybeError removeTodo(std::int64_t id);
 
-    UpdateTodoResult setCompleteStatus(std::int64_t id, bool status);
-    UpdateTodoResult setCompleteStatus(std::int64_t id, bool status, db::DBAccess&);
+    UpdateTodoResult setCompleteStatus(domain::TodoId id, bool status);
+    UpdateTodoResult setCompleteStatus(domain::TodoId id, bool status, db::DBAccess&);
     
-    UpdateTodoResult setPriority(std::int64_t id, int priority);
-    UpdateTodoResult setPriority(std::int64_t id, int priority, db::DBAccess&);
+    UpdateTodoResult setPriority(domain::TodoId id, int priority);
+    UpdateTodoResult setPriority(domain::TodoId id, int priority, db::DBAccess&);
     
     GetCountResult getCount();
     GetCountResult getCount(db::DBAccess&);
 
 private:
     template <class... Ty>
-    std::optional<db::error::StorageError> insert_(Ty&&... args) {
+    MaybeError insert_(Ty&&... args) {
         db::guard::StatementResetGuard guard{ insertionQuery_ };
         try {
             int idx = 1;

@@ -14442,7 +14442,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
         {
             tick_function_();
             tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
-            tick_timer_.async_wait([this](const error_code& ec) {
+            tick_timer_.async_wait([&](const error_code& ec) {
                 if (ec)
                     return;
                 on_tick();
@@ -14524,7 +14524,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             {
                 tick_timer_.expires_after(std::chrono::milliseconds(tick_interval_.count()));
                 tick_timer_.async_wait(
-                  [this](const error_code& ec) {
+                  [&](const error_code& ec) {
                       if (ec)
                           return;
                       on_tick();
@@ -14548,7 +14548,7 @@ namespace crow // NOTE: Already documented in "crow/app.h"
             do_accept();
 
             std::thread(
-              [this] {
+              [&] {
                   notify_start();
                   io_context_.run();
                   CROW_LOG_INFO << "Exiting.";
