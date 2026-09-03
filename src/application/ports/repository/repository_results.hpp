@@ -36,4 +36,9 @@ using GetCountResult = std::expected<
     db::error::StorageError
 >;
 
+using UpdateTodoResult = std::expected<
+    bool, 
+    db::error::StorageError    
+>;
+
 } // namespace todod::repository

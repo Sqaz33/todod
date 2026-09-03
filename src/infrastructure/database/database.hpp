@@ -16,8 +16,7 @@ public:
 
 public:
     SQLite::Database& connection() noexcept;
-    std::mutex& mutex() noexcept;
-
+    
     template <class F>
     auto access(F&& f) {
         std::lock_guard<std::mutex> lk{mutex};

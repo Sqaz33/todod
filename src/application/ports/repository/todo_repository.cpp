@@ -96,7 +96,11 @@ TodoRepository::TodoRepository(std::shared_ptr<db::DataBase> db) :
     ))
 {}
 
-TodoCreationResult TodoRepository::createWithNoLock(const domain::TodoDefinition& def) {
+TaskOrError TodoRepository::create(const domain::TodoDefinition& def) {
+    return db_->access([&this](db::DBAccess& access) { return create(def, access); })
+}
+
+TaskOrError TodoRepository::create(const domain::TodoDefinition& def, db::DBAccess&) {
     auto err = insert_(
         def.title(),
         def.description(),
@@ -111,135 +115,159 @@ TodoCreationResult TodoRepository::createWithNoLock(const domain::TodoDefinition
     return domain::TodoTask{{db_->connection().getLastInsertRowid()}, def};
 }
 
-std::vector<TodoTask> TodoRepository::getAll() {
-    std::lock_guard<std::mutex> lk(db_->mutex());
+// std::vector<TodoTask> TodoRepository::getAll() {
+//     std::lock_guard<std::mutex> lk(db_->mutex());
 
-    std::vector<TodoTask> todos;
-    while (getAllQuery_.executeStep()) {
-        todos.push_back(readTask(getAllQuery_));
-    }   
-    getAllQuery_.reset();
-    getAllQuery_.clearBindings();
-    return todos;
-}
+//     std::vector<TodoTask> todos;
+//     while (getAllQuery_.executeStep()) {
+//         todos.push_back(readTask(getAllQuery_));
+//     }   
+//     getAllQuery_.reset();
+//     getAllQuery_.clearBindings();
+//     return todos;
+// }
 
-bool TodoRepository::updateTodo(const TodoTask& task) {
-    std::lock_guard<std::mutex> lk(db_->mutex());
+// bool TodoRepository::updateTodo(const TodoTask& task) {
+//     std::lock_guard<std::mutex> lk(db_->mutex());
 
-    updateQuery_.bind(1, task.title);
-    updateQuery_.bind(2, task.description);
-    updateQuery_.bind(3, task.priority);
-    updateQuery_.bind(4, helpers::toTimestamp(task.completedAt));
-    updateQuery_.bind(5, task.completed);
-    updateQuery_.bind(6, task.id);
+//     updateQuery_.bind(1, task.title);
+//     updateQuery_.bind(2, task.description);
+//     updateQuery_.bind(3, task.priority);
+//     updateQuery_.bind(4, helpers::toTimestamp(task.completedAt));
+//     updateQuery_.bind(5, task.completed);
+//     updateQuery_.bind(6, task.id);
 
-    updateQuery_.exec();
+//     updateQuery_.exec();
     
-    bool updated = db_->connection().getChanges() != 0;
+//     bool updated = db_->connection().getChanges() != 0;
 
-    updateQuery_.reset();
-    updateQuery_.clearBindings();
+//     updateQuery_.reset();
+//     updateQuery_.clearBindings();
 
-    return updated;
+//     return updated;
+// }
+
+// std::optional<TodoTask> TodoRepository::findByID(std::int64_t id) {
+//     std::lock_guard<std::mutex> lk(db_->mutex());
+
+//     findByIdQuery_.bind(1, id);
+//     if (!findByIdQuery_.executeStep()) {
+//         findByIdQuery_.reset();
+//         findByIdQuery_.clearBindings();
+//         return std::nullopt;
+//     }
+//     TodoTask task = readTask(findByIdQuery_);
+
+//     findByIdQuery_.reset();
+//     findByIdQuery_.clearBindings();
+
+//     return task;
+// }
+
+GetPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit) {
+    return db_->access([&](db::DBAccess& access) { return getPage(offset, limit, access); });
 }
 
-std::optional<TodoTask> TodoRepository::findByID(std::int64_t id) {
-    std::lock_guard<std::mutex> lk(db_->mutex());
+GetPageResult TodoRepository::getPage(std::int32_t offset, std::int32_t limit, db::DBAccess&) {
+    db::guard::StatementResetGuard guard { getPageQeury_ };
 
-    findByIdQuery_.bind(1, id);
-    if (!findByIdQuery_.executeStep()) {
-        findByIdQuery_.reset();
-        findByIdQuery_.clearBindings();
-        return std::nullopt;
+    try {
+        getPageQeury_.bind(1, static_cast<std::int64_t>(limit));
+        getPageQeury_.bind(2, static_cast<std::int64_t>(offset));
+        TodoPage page = {{}, {getCount(), offset, limit}};
+
+        while (getPageQeury_.executeStep()) {
+            page.todos.push_back(readTask(getPageQeury_));
+        }
+
+        getPageQeury_.reset();
+        getPageQeury_.clearBindings();
+
+        return page;
+    } catch (const SQLite::Exception& e) {
+        return std::unexpect(db::error::StorageError::create("get page", e));
     }
-    TodoTask task = readTask(findByIdQuery_);
-
-    findByIdQuery_.reset();
-    findByIdQuery_.clearBindings();
-
-    return task;
 }
 
-std::optional<TodoPage> 
-TodoRepository::getPage(std::int32_t offset, std::int32_t limit) {
-    if (limit < 0 || offset < 0) {
-        return std::nullopt;
+// bool TodoRepository::removeTodo(std::int64_t id) {
+//     std::lock_guard<std::mutex> lk(db_->mutex());
+
+//     removeQuery_.bind(1, id);
+
+//     removeQuery_.exec();
+
+//     bool removed = db_->connection().getChanges() != 0;
+
+//     removeQuery_.reset();
+//     removeQuery_.clearBindings();
+
+//     return removed;
+// }
+
+UpdateTodoResult TodoRepository::setCompleteStatus(std::int64_t id, bool status) {
+    return db_->access([&](db::DBAccess& access) { return setCompleteStatus(id, status, access); });
+}
+
+UpdateTodoResult TodoRepository::setCompleteStatus(std::int64_t id, bool status, db::DBAccess&) {
+    db::guard::StatementResetGuard guard { setCompleteQuery_ };
+
+    try {
+        setCompleteQuery_.bind(1, status);
+        setCompleteQuery_.bind(2, id);
+
+        setCompleteQuery_.exec();
+        
+        bool updated = db_->connection().getChanges() != 0;
+
+        setCompleteQuery_.reset();
+        setCompleteQuery_.clearBindings();
+
+       return updated;
+    } catch (const SQLite::Exception& e) {
+        return std::unexpect(db::error::StorageError::create("set complete status", e));
     }
+}
 
-    std::lock_guard<std::mutex> lk(db_->mutex());
+UpdateTodoResult TodoRepository::setPriority(std::int64_t id, int priority) {
+    return db_->access([&](db::DBAccess& access) { return setPriority(id, priority, access); });
+}
 
-    getPageQeury_.bind(1, static_cast<std::int64_t>(limit));
-    getPageQeury_.bind(2, static_cast<std::int64_t>(offset));
-    TodoPage page = {{}, {getCountWithNoLock_(), offset, limit}};
+UpdateTodoResult TodoRepository::setPriority(std::int64_t id, int priority, db::DBAccess&) {
+    db::guard::StatementResetGuard guard { setPriorityQuery_ };
 
-    while (getPageQeury_.executeStep()) {
-        page.todos.push_back(readTask(getPageQeury_));
+    try {
+        setPriorityQuery_.bind(1, priority);
+        setPriorityQuery_.bind(2, id);
+
+        setPriorityQuery_.exec();
+        
+        bool updated = db_->connection().getChanges() != 0;
+
+        setPriorityQuery_.reset();
+        setPriorityQuery_.clearBindings();
+
+        return updated;
+    } catch (const SQLite::Exception& e) {
+        return std::unexpect(db::error::StorageError::create("set priority", e));
     }
-
-    getPageQeury_.reset();
-    getPageQeury_.clearBindings();
-
-    return page;
 }
 
-bool TodoRepository::removeTodo(std::int64_t id) {
-    std::lock_guard<std::mutex> lk(db_->mutex());
-
-    removeQuery_.bind(1, id);
-
-    removeQuery_.exec();
-
-    bool removed = db_->connection().getChanges() != 0;
-
-    removeQuery_.reset();
-    removeQuery_.clearBindings();
-
-    return removed;
+GetCountResult TodoRepository::getCount() {
+    return db_->access([&](db::DBAccess& access) { return getCount(access); });
 }
 
-bool TodoRepository::setCompleteStatus(std::int64_t id, bool status) {
-    std::lock_guard<std::mutex> lk(db_->mutex());
+GetCountResult TodoRepository::getCount(db::DBAccess&) {
+    db::guard::StatementResetGuard guard { setPriorityQuery_ };
 
-    setCompleteQuery_.bind(1, status);
-    setCompleteQuery_.bind(2, id);
-
-    setCompleteQuery_.exec();
-    
-    bool updated = db_->connection().getChanges() != 0;
-
-    setCompleteQuery_.reset();
-    setCompleteQuery_.clearBindings();
-
-    return updated;
-}
-
-bool TodoRepository::setPriority(std::int64_t id, int priority) {
-    std::lock_guard<std::mutex> lk(db_->mutex());
-
-    setPriorityQuery_.bind(1, priority);
-    setPriorityQuery_.bind(2, id);
-
-    setPriorityQuery_.exec();
-    
-    bool updated = db_->connection().getChanges() != 0;
-
-    setPriorityQuery_.reset();
-    setPriorityQuery_.clearBindings();
-
-    return updated;
-}
-
-std::int32_t TodoRepository::getCount() {
-    std::lock_guard<std::mutex> lk(db_->mutex());
-    return getCountWithNoLock_();
-}
-
-std::int32_t TodoRepository::getCountWithNoLock_() {
-    getCountQuery_.executeStep();
-    std::int32_t count = getCountQuery_.getColumn(0).getInt();
-    getCountQuery_.reset();
-    getCountQuery_.clearBindings();
-    return count;
+    try {
+        getCountQuery_.executeStep();
+        std::int32_t count = getCountQuery_.getColumn(0).getInt();
+        getCountQuery_.reset();
+        getCountQuery_.clearBindings();
+        return count;
+    } catch (const SQLite::Exception& e) {
+        return std::unexpect(db::error::StorageError::create("get count", e));
+    }
 }
 
 } // namespace todod::repository

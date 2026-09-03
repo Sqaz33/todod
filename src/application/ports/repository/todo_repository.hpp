@@ -14,27 +14,31 @@ public:
     explicit TodoRepository(std::shared_ptr<db::DataBase> db);
 
 public:
-    TaskOrError create(const domain::TodoDefinition& def) {
-        return db_->access([&this](db::DBSession& session) { return create(def, session); })
-    }
-    TaskOrError create(const domain::TodoDefinition& def, db::DBSession&) {
-        return ...
-    }
+    TaskOrError create(const domain::TodoDefinition& def);
+    TaskOrError create(const domain::TodoDefinition& def, db::DBAccess&);
 
-    GetAllResult getAll();
-    MaybeError updateTodo(const domain::TodoTask& task);
-    TaskOrError findByID(std::int64_t id);
+    // GetAllResult getAll();
+    // MaybeError updateTodo(const domain::TodoTask& task);
+    // TaskOrError findByID(std::int64_t id);
     GetPageResult getPage(std::int32_t offset, std::int32_t limit);
-    MaybeError removeTodo(std::int64_t id);
-    MaybeError setCompleteStatus(std::int64_t id, bool status);
-    MaybeError setPriority(std::int64_t id, int priority);
+    GetPageResult getPage(std::int32_t offset, std::int32_t limit,  db::DBAccess&);
+
+    // MaybeError removeTodo(std::int64_t id);
+
+    UpdateTodoResult setCompleteStatus(std::int64_t id, bool status);
+    UpdateTodoResult setCompleteStatus(std::int64_t id, bool status, db::DBAccess&);
+    
+    UpdateTodoResult setPriority(std::int64_t id, int priority);
+    UpdateTodoResult setPriority(std::int64_t id, int priority, db::DBAccess&);
+    
     GetCountResult getCount();
+    GetCountResult getCount(db::DBAccess&);
 
 private:
     template <class... Ty>
     std::optional<db::error::StorageError> insert_(Ty&&... args) {
+        db::guard::StatementResetGuard guard{ insertionQuery_ };
         try {
-            db::guard::StatementResetGuard guard{insertionQuery_};
             int idx = 1;
             (insertionQuery_.bind(idx++, std::forward<Ty>(args)), ...);
             insertionQuery_.exec();
@@ -43,8 +47,6 @@ private:
         }
         return std::nullopt;
     }
-
-    std::int32_t getCountWithNoLock_();
     
 private:
     std::shared_ptr<db::DataBase> db_;
