@@ -9,23 +9,17 @@
 #include <vector>
 
 #include "domain/script.hpp"
+#include "domain/ids.hpp"
 
 namespace todod::scripting::api {
 
-struct ScriptTodo {
-    std::int64_t id;
-    std::string title;
-    bool completed;
-    unsigned priority;
-};
-
 struct SetTodoPriorityCommand {
-    std::int64_t id;
+    domain::TodoId id;
     int priority;
 };
 
 struct CompleteTodoCommand {
-    std::int64_t id;
+    domain::TodoId id;
 };
 
 using ScriptCommand = std::variant<
@@ -37,13 +31,5 @@ struct ScriptContext {
     std::vector<ScriptCommand> commands;
     std::vector<std::string> logs;
 };
-
-void registerScript(
-    sol::state& lua, 
-    sol::environment& env, 
-    const ScriptTodo& todo,
-    ScriptContext& ctx);
-
-bool validateScript(const HandlerScript& script);
 
 } // namespace todod::scripting::api 

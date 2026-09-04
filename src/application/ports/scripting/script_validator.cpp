@@ -1,0 +1,27 @@
+#include "script_validator.hpp"
+
+#include "infrastructure/scripting/script_safe_execution.hpp"
+
+namespace todod::scripting::validation {
+
+std::optional<error::ScriptError> 
+validateScript(const domain::HandlerScriptDefinition& script) {
+    return execution::execute(
+        script.source(),
+        "todo",
+        std::tuple{
+            execution::named("id", std::int64_t{1}),
+            execution::named("title", "test"),
+            execution::named("description", "test"),
+            execution::named("priority", 1u),
+            execution::named("completed", false)
+        },
+        std::tuple{
+            execution::named("complete", [](std::int64_t) { }),
+            execution::named("set_priority", [](std::int64_t, int) { }),
+            execution::named("log", [](const std::string&) { })
+        }
+    );
+}  
+
+} // namespace todod::scripting::validation

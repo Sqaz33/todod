@@ -9,12 +9,19 @@ namespace todod::scripting::limits {
 
 constexpr int HOOK_INTERVAL = 10'000;
 
-struct ScriptBudget {
-    std::chrono::steady_clock::time_point deadline;
-    std::int64_t instructionsLeft;
+enum class LimitStatus {
+    NotExceeded,
+    InstructionLimitExceeded,
+    TimeLimitExceeded,
 };
 
-void executionLimitHook(lua_State* lua, lua_Debug*);
+struct LimitState {
+    LimitStatus status;
+    struct ScriptBudget {
+        std::chrono::steady_clock::time_point deadline;
+        std::int64_t instructionsLeft;
+    } budget;
+};
 
 class ScriptExecutionLimit {
 public:
@@ -25,9 +32,17 @@ public:
 
     ~ScriptExecutionLimit();
 
+    ScriptExecutionLimit(const ScriptExecutionLimit&) = delete;
+    ScriptExecutionLimit& operator=(const ScriptExecutionLimit&) = delete;
+    ScriptExecutionLimit(ScriptExecutionLimit&&) = delete;
+    ScriptExecutionLimit& operator=(ScriptExecutionLimit&&) = delete;
+
+public:
+    LimitStatus status() const noexcept;
+
 private:
     lua_State* lua_;
-    ScriptBudget budget_;
+    LimitState state_;
 };
 
 } // namespace todod::scripting::limits

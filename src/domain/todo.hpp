@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <vector>
+#include <expected>
 
 #include "page.hpp"
 #include "ids.hpp"
@@ -29,7 +30,7 @@ enum class TodoValidationError {
 
 class TodoDefinition;
 
-using TodoDefinitionResult = std::expected<TodoDefinition, TodoValidationError>
+using TodoDefinitionResult = std::expected<TodoDefinition, TodoValidationError>;
 
 class TodoDefinition {
 public:

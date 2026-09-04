@@ -47,7 +47,6 @@ public:
         }
     }
 
-
 private:
     std::mutex mutex_;
     SQLite::Database db_;
